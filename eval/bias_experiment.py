@@ -4,7 +4,7 @@ Data: Liang et al. 2023 (github.com/Weixin-Liang/ChatGPT-Detector-Bias). The rep
 so essays stay in data/external/ and only SHA 256 hashes and scores are written to results/.
 
 Usage:
-    eval/fetch_models.sh
+    .venv/bin/python eval/fetch_models.py
     .venv/bin/python eval/bias_experiment.py --liang data/external/liang \
         --models data/external/models --out results/bias_v1
 """
@@ -25,7 +25,7 @@ from scipy.stats import beta, mannwhitneyu
 from detechum.scorers.binoculars import BinocularsScorer
 from detechum.scorers.gpttrace import GPTTraceScorer
 
-# key: (hub repo, pinned revision, local folder written by eval/fetch_models.sh, weights file, published SHA 256)
+# key: (hub repo, pinned revision, local folder written by eval/fetch_models.py, weights file, published SHA 256)
 MODELS = {
     "gpttrace": ("nakas/gpttrace-v8s-1b", "ac748e32ca8c90bb8858fadc427757728e27b063", "gpttrace-v8s-1b",
                  "model/model.safetensors", "379b154cadb0fd6a226badd2f745705f49c19461ef150ee6b97fec92e82ba538"),
@@ -102,7 +102,7 @@ def verify_models(models_root: Path) -> dict[str, Path]:
             for chunk in iter(lambda: fh.read(1 << 24), b""):
                 digest.update(chunk)
         if digest.hexdigest() != expected:
-            raise SystemExit(f"{repo}: {weights} does not match the published SHA 256; rerun eval/fetch_models.sh")
+            raise SystemExit(f"{repo}: {weights} does not match the published SHA 256; rerun eval/fetch_models.py")
         paths[key] = models_root / folder
     return paths
 

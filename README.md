@@ -23,6 +23,7 @@ uv pip install --python .venv/bin/python -e ".[models]"
 The `models` extra installs PyTorch and Transformers, which the scorers in `src/detechum/scorers` and the
 experiments in `eval/` need. The core package (`detechum.verdict`, `detechum.facts`) has no dependencies.
 
-`eval/fetch_models.sh` downloads the pinned model weights (about 10.3 GB) into `data/external/models`,
-which is not committed. If the connection drops or stalls, the script exits with an error; run it again.
-Completed files are skipped and a partial file resumes where it stopped.
+`.venv/bin/python eval/fetch_models.py` downloads the pinned model weights (about 10.3 GB) into `data/external/models`,
+which is not committed. Weights download as 32 MB ranges over parallel connections, and a stalled
+connection is retried automatically. If the run is interrupted, start it again: completed ranges are kept.
+Each assembled file is checked against the SHA 256 published for its pinned revision.
