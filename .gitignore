@@ -218,3 +218,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Third party datasets without a redistribution licence (fetched locally, referenced by hash)
+data/external/
+
+# macOS
+.DS_Store
