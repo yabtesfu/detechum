@@ -13,7 +13,9 @@ fetch() {
     if [[ -f "$out.done" ]]; then continue; fi
     mkdir -p "$(dirname "$out")"
     echo "fetching $repo@$rev $file"
-    curl -fL --retry 50 --retry-all-errors --retry-delay 10 -C - \
+    # A stalled transfer never errors on its own, so abort below 1 KB/s for 60 s. The caller reruns
+    # this script, and -C - resumes from the bytes already on disk with a freshly signed redirect.
+    curl -fL --retry 3 --retry-all-errors --retry-delay 10 --speed-limit 1024 --speed-time 60 -C - \
       -o "$out" "https://huggingface.co/$repo/resolve/$rev/$file"
     touch "$out.done"
   done

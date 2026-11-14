@@ -15,7 +15,6 @@ import json
 import platform
 import random
 import subprocess
-import sys
 from pathlib import Path
 
 import numpy as np
@@ -23,9 +22,8 @@ import torch
 import transformers
 from scipy.stats import beta, mannwhitneyu
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from detechum.scorers.binoculars import BinocularsScorer  # noqa: E402
-from detechum.scorers.gpttrace import GPTTraceScorer  # noqa: E402
+from detechum.scorers.binoculars import BinocularsScorer
+from detechum.scorers.gpttrace import GPTTraceScorer
 
 # key: (hub repo, pinned revision, local folder written by eval/fetch_models.sh, weights file, published SHA 256)
 MODELS = {
