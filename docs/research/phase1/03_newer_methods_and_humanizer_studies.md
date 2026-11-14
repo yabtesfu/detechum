@@ -1,6 +1,6 @@
 # Phase 1: Methods that beat the classic baselines (2024 to late 2026)
 
-Researched 14 Nov 2026 for Detechum. Every number has an inline source. Anything I could not check against a primary source is marked **UNVERIFIED**. Baselines covered elsewhere (GLTR, DetectGPT, Fast DetectGPT, Binoculars, Ghostbuster, RoBERTa, DIPPER, Kirchenbauer) appear here only as comparison points.
+Researched 14 Nov 2026 for Detechum. Every number has an inline source. Anything not checked against a primary source is marked **UNVERIFIED**. Baselines covered elsewhere (GLTR, DetectGPT, Fast DetectGPT, Binoculars, Ghostbuster, RoBERTa, DIPPER, Kirchenbauer) appear here only as comparison points.
 
 Abbreviations: **TPR@k%** = true positive rate (recall on AI text) at a k% false positive rate on human text. **SR** = self reported by the method's authors or vendor. **IND** = independent evaluation.
 
@@ -10,10 +10,10 @@ Abbreviations: **TPR@k%** = true positive rate (recall on AI text) at a k% false
 
 ### 1.1 Access and method
 
-* **Accessed 14 Nov 2026.** The page at https://raid-bench.xyz/leaderboard is a JavaScript app; WebFetch received only the title. I rebuilt the ranking from the same per submission JSON files the site loads: index at https://raid-bench.xyz/data/submissions/_index.json, files at `https://raid-bench.xyz/data/submissions/<name>.json`. These files are copies of `leaderboard/submissions/<name>/results.json` in https://github.com/liamdugan/raid; the script that copies them is https://raw.githubusercontent.com/liamdugan/raid/main/leaderboard/copy-results-to-web-dist.sh.
+* **Accessed 14 Nov 2026.** The page at https://raid-bench.xyz/leaderboard is a JavaScript app; a plain fetch returns only the title. The ranking below was rebuilt from the same per submission JSON files the site loads: index at https://raid-bench.xyz/data/submissions/_index.json, files at `https://raid-bench.xyz/data/submissions/<name>.json`. These files are copies of `leaderboard/submissions/<name>/results.json` in https://github.com/liamdugan/raid; the script that copies them is https://raw.githubusercontent.com/liamdugan/raid/main/leaderboard/copy-results-to-web-dist.sh.
 * The newest repo commit on the access date was 12 Nov 2026 ("Merge pull request #237 … aicheck v5r") (GitHub API, https://api.github.com/repos/liamdugan/raid/commits).
 * **63 submissions in all; 59 have a full aggregate score.** The other four have no `all` aggregate: Binoculars and FastDetectGPT (incomplete splits), and Gaussian Extreme and Luminar (null accuracy). Each file carries the note "This submission will not appear in the main leaderboard" (e.g. https://raid-bench.xyz/data/submissions/binoculars.json).
-* **Cross check.** A vendor blog dated August 2026 listed the leaderboard at that time as Zhuque #1 at 99.80%, MELD #2 at 99.78%, Trinka #3 at 99.76%, QuillBot #7 at 99.62%, Slop or Not #8 at 99.52%, Grammarly #9 at 99.47% and GPTZero #16 at 97.24%, "43 submissions, 4 partial" (https://slopornot.ai/blog/slop-or-not-raid-benchmark-ai-detector-accuracy). Every one of those scores matches my recomputation exactly. My ranks differ only where entries were added after August (Winston, GPTTrace, XYZ, FLAIRD, ParaTrace v8 and others).
+* **Cross check.** A vendor blog dated August 2026 listed the leaderboard at that time as Zhuque #1 at 99.80%, MELD #2 at 99.78%, Trinka #3 at 99.76%, QuillBot #7 at 99.62%, Slop or Not #8 at 99.52%, Grammarly #9 at 99.47% and GPTZero #16 at 97.24%, "43 submissions, 4 partial" (https://slopornot.ai/blog/slop-or-not-raid-benchmark-ai-detector-accuracy). Every one of those scores matches the recomputation here exactly. Ranks differ only where entries were added after August (Winston, GPTTrace, XYZ, FLAIRD, ParaTrace v8 and others).
 
 ### 1.2 What the metric is (checked precisely)
 
@@ -51,7 +51,7 @@ Columns: TPR@5% and TPR@1% overall (attacks included), AUROC, TPR@5% with no att
 | unranked | Binoculars | n/a | n/a | n/a (no attack AUROC 84.40) | 78.98 (@1%: 69.54) | not submitted | not submitted | 42.06 | 36.10 | 22 Jan 2024 | Open |
 
 Notes:
-* **GPTZero.** Its no attack TPR@1% on the leaderboard is 95.72% (https://raid-bench.xyz/data/submissions/gptzero.json). That matches GPTZero's marketing claim of "95.7% … ~1% FPR" on RAID. I found that claim only in secondary sources and could not open GPTZero's own post, so the claim is UNVERIFIED, but the leaderboard number is primary.
+* **GPTZero.** Its no attack TPR@1% on the leaderboard is 95.72% (https://raid-bench.xyz/data/submissions/gptzero.json). That matches GPTZero's marketing claim of "95.7% … ~1% FPR" on RAID. The claim appears only in secondary sources; GPTZero's own post could not be opened, so the claim is UNVERIFIED, but the leaderboard number is primary.
 * **Pangram and Originality.ai have no leaderboard submission.** There is no directory for either under `leaderboard/submissions` (GitHub API listing, 14 Nov 2026). Originality.ai appears only in the original RAID paper. Its TPR@5% was 85.0 with no attack and **96.7 under paraphrase**, against GPTZero 66.5 and 64.0 and Binoculars 79.6 and 80.3 (RAID paper Table 6, https://arxiv.org/html/2405.07940). Originality's blog says the version tested was "Originality.ai 2.0 Standard", now retired (https://originality.ai/blog/robust-ai-detection-study-raid).
 * **RAID Shared Task (COLING 2025).** 9 teams submitted 23 detectors, and "multiple participants" exceeded 99% TPR at 5% FPR (https://arxiv.org/abs/2501.08913).
 * **Takeaway.** At the top, RAID is saturated: 18 entries are at or above 99.47% TPR@5% with attacks included. Supervised encoders fine tuned on RAID train (Ettin, ModernBERT, DeBERTa) now match or beat commercial tools on the board. RAID does not include modern commercial humanizers, and it uses oracle thresholds per domain. Section 4.4 shows that tools near the top of RAID (QuillBot, Grammarly) are among the easiest to bypass with commercial humanizers.
@@ -152,7 +152,7 @@ All numbers in this section are SR unless marked otherwise.
   * The comparisons were run by Pangram on third party datasets; there is no external replication. **Not on the RAID leaderboard.**
 
 **Independent evidence:**
-* **Jabarian & Imas, NBER WP 34223 (Sept 2025).** Evaluated Pangram, OriginalityAI, GPTZero and RoBERTa. Pangram had "near zero FNR and FPR" that held across short passages (≤50 words) and humanizers (StealthGPT), and was the only tool to meet a strict FPR cap of 0.005 without losing accuracy (https://www.nber.org/papers/w34223). The per detector numbers are in the PDF, which I could not render: **UNVERIFIED**. Pangram's own report quotes figures on this benchmark (above), but those are Pangram rerunning it, not the authors' numbers.
+* **Jabarian & Imas, NBER WP 34223 (Sept 2025).** Evaluated Pangram, OriginalityAI, GPTZero and RoBERTa. Pangram had "near zero FNR and FPR" that held across short passages (≤50 words) and humanizers (StealthGPT), and was the only tool to meet a strict FPR cap of 0.005 without losing accuracy (https://www.nber.org/papers/w34223). The per detector numbers are in the PDF, which could not be rendered: **UNVERIFIED**. Pangram's own report quotes figures on this benchmark (above), but those are Pangram rerunning it, not the authors' numbers.
 * **Karr et al., Notre Dame (arXiv 2608.11256, Aug 2026; acknowledgments thank Pangram for API access).** Pangram 3.2 TPR at τ=0.5 on AI rewritten abstracts: 80.6% (2013 to 15) and 86.5% (2023 to 25). After **Undetectable AI v11** humanization: **1.5% and 3.4%**. GPTZero: 55.8% and 61.6% before, 4.0% and 3.9% after. Flag rate on unmodified 2023 to 25 human abstracts: Pangram 14.9%, GPTZero 8.9%; theology 26.6% and political science 24.1% for Pangram (https://arxiv.org/html/2608.11256v2). This strongly contradicts the vendor's humanizer claims. Caveats: a single fixed threshold, published abstracts rather than student essays, and possible undisclosed AI use in the "human" abstracts.
 * **AI Humanizer Benchmark, Nov 2026** (data: §4.4): Pangram had the lowest mean human probability on humanized outputs, 0.054.
 * **Xu et al., "Base Models Look Human To AI Detectors"** (arXiv 2605.19516, CMU): GPTZero and Pangram often judge **base model** (noninstruction tuned) text "overwhelmingly human". The iterative paraphrasing attack HIP evades both (https://arxiv.org/abs/2605.19516). The abstract gives no numbers.
@@ -175,7 +175,7 @@ All numbers in this section are SR unless marked otherwise.
 * **IND:**
   * RAID paper: TPR@5% 85.0 with no attack and 96.7 on paraphrase (best in the paper). Weak on homoglyph and zero width attacks per its blog (https://arxiv.org/html/2405.07940; https://originality.ai/blog/robust-ai-detection-study-raid).
   * Arabic study (arXiv 2511.16690): Originality was the best commercial tool at 92% accuracy, but fell to **12%** on human articles lightly polished by Mistral or Gemma 3 (https://arxiv.org/abs/2511.16690).
-  * AI Humanizer Benchmark: mean human probability on humanized text was **0.722 in Oct 2026 and 0.110 in Nov 2026**. That suggests a model change between cycles (my computation, §4.4).
+  * AI Humanizer Benchmark: mean human probability on humanized text was **0.722 in Oct 2026 and 0.110 in Nov 2026**. That suggests a model change between cycles (computed for this report, §4.4).
 
 ### 3.4 Turnitin
 * **SR:** FPR under 1% for documents with ≥20% AI writing; about 4% at the sentence level; ELL vs native FPR 0.014 vs 0.013 on documents of at least 300 words. The Turnitin pages returned HTTP 403, so these come from secondary summaries in search results: **UNVERIFIED** against the primary page. "AI bypasser detection" launched 27 Aug 2025 (https://www.plagiarismtoday.com/2025/08/27/turnitin-launches-anti-ai-humanizer-feature/).
@@ -232,13 +232,13 @@ Six humanizing attacks, 4 domains, 6 source models, built with commercial humani
 * **MAGE** (ACL 2024; arXiv 2305.13242): the best detector identifies 86.54% of OOD text from an unseen LLM (https://arxiv.org/abs/2305.13242). Binoculars TPR@1% on MAGE is 56.04, or 75.80 with MCP (https://arxiv.org/html/2505.05084v2).
 * **DetectRL** (NeurIPS 2024 D&B; arXiv 2410.23746): arXiv abstract human text; GPT 3.5, PaLM 2, Claude instant and Llama 2 to 70b; prompt, word substitution and spelling attacks. Zero shot detectors "often struggle" (https://arxiv.org/abs/2410.23746). AUROC on DetectRL Multi Domain: Fast DetectGPT 74.98, Binoculars 77.45, DNA DetectLLM 88.23 (https://arxiv.org/html/2509.15550v2).
 
-### 4.4 AI Humanizer Benchmark (monthly; my computation from its published data)
+### 4.4 AI Humanizer Benchmark (monthly; computed from its published data)
 
 **Operator and conflict of interest.** Run by "the team that makes UndetectedGPT", a humanizer that is ranked on the benchmark; the site discloses this (https://aihumanizerbenchmark.com/).
 
 **Design.** 33 AI source texts per cycle, written by 6 models from OpenAI, Anthropic and Google from Oct 2026. 7 detectors; "Pangram replaced Winston AI from November 2026". Each detector score is "the detector's human probability" (https://huggingface.co/datasets/AIHumanizerBenchmark/ai-humanizer-benchmark). There are **no human control texts**, so FPR is not measured.
 
-**Per detector results.** I computed the mean human probability (pass rate) per detector from `detector-scores.json`: https://huggingface.co/datasets/AIHumanizerBenchmark/ai-humanizer-benchmark/resolve/main/data/cycles/2026-11/detector-scores.json and the matching `2026-10` file. Lower means harder to fool.
+**Per detector results.** Mean human probability (pass rate) per detector, computed from `detector-scores.json`: https://huggingface.co/datasets/AIHumanizerBenchmark/ai-humanizer-benchmark/resolve/main/data/cycles/2026-11/detector-scores.json and the matching `2026-10` file. Lower means harder to fool.
 
 | Detector | Mean human prob, Oct 2026 (n=363) | Mean human prob, Nov 2026 (n=330) |
 |---|---|---|

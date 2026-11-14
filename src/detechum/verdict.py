@@ -22,7 +22,7 @@ class ScoredDocument:
     p_low: float           # 5th percentile of the bootstrap interval
     p_high: float          # 95th percentile of the bootstrap interval
     n_words: int
-    stratum_calibrated: bool   # do we have calibration data for this language/domain/writer group?
+    stratum_calibrated: bool   # calibration data exists for this language, domain and writer group
 
 
 MIN_WORDS_FOR_VERDICT = 150  # provisional; set from length stratified curves (plan.md §1)
@@ -31,9 +31,11 @@ MIN_WORDS_FOR_VERDICT = 150  # provisional; set from length stratified curves (p
 def decide_verdict(doc: ScoredDocument, tau: float) -> Verdict:
     """Return the verdict for one document, given the stratum's decision threshold `tau`.
 
-    Policy (strict): a label is only given when the WHOLE uncertainty interval sits on one
-    side of `tau`. If the interval straddles `tau`, we say so instead of letting the point
-    estimate decide, because that is how innocent writers get accused on a coin toss.
+    A label is returned only when the whole interval [p_low, p_high] lies on one side of
+    `tau`; an interval that straddles `tau` yields CANT_TELL. The point estimate never
+    decides a label on its own, so a borderline score cannot produce an accusation.
+
+    Raises ValueError if the interval is inconsistent or `tau` is outside (0, 1).
     """
     if not (0.0 <= doc.p_low <= doc.p_ai <= doc.p_high <= 1.0):
         raise ValueError(f"inconsistent interval: {doc.p_low=} {doc.p_ai=} {doc.p_high=}")

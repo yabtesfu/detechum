@@ -16,7 +16,7 @@ This document records **what each tool exposes and claims**, and keeps three cat
 * One sample submission per site, through the site's own public UI, at normal user volume.
 * No login, no paid plan, no CAPTCHA/bot challenge circumvention, no de obfuscation of payloads,
   no calls to endpoints marked internal (e.g. the `x-job-secret` usage endpoints).
-* The undetectable.ai link supplied to us carried affiliate parameters (`fpr`, `fp_sid`, `gad_source`);
+* The undetectable.ai URL on the original site list carried affiliate parameters (`fpr`, `fp_sid`, `gad_source`);
   we used the bare `https://undetectable.ai/` so no referral was credited.
 * Sample text (85 words, written by Claude for this test, deliberately formulaic with
   "Additionally / Furthermore / In conclusion"):
@@ -165,7 +165,7 @@ or test with a key).
 
 **Observed** (evidence `ev_53f7d017a0e23cd4090f22bbc2b5777e60d4cefdc77fe231d6da4aac03a59448`): after a redirect with `__cf_chl_rt_tk`, the page showed
 "Performing security verification … verifies you are not a bot" (Cloudflare, Ray ID `a5a481820a5a5457`).
-WebFetch got HTTP 403. **Nothing past the challenge was observed by automation.**
+A plain HTTP fetch got 403. **Nothing past the challenge was observed by automation.**
 
 ### Manual run by the project owner (screenshot, 14 Nov 2026)
 
@@ -206,7 +206,7 @@ performs every click and any human verification step), then read that tab's netw
 
 ## The full black box probe (not run yet: what it needs)
 
-The probe set in the brief (50 pre Nov 2022 human texts, 50 nonnative essays, 50 AI texts from known
+The planned probe set (50 pre Nov 2022 human texts, 50 nonnative essays, 50 AI texts from known
 model+prompt, plus paraphrased/edited variants) is specified in
 [`../evaluation/plan.md`](../evaluation/plan.md#6-probe-set-phase-2-black-box-comparison). It was **not run**. It needs:
 

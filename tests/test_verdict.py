@@ -19,7 +19,7 @@ class DecideVerdictTest(unittest.TestCase):
         self.assertIs(decide_verdict(doc(0.05, 0.20, 0.40), TAU), Verdict.LIKELY_HUMAN)
 
     def test_straddling_interval_is_cant_tell_even_if_point_estimate_is_over(self):
-        # The example from the design discussion: best guess 0.70, range 0.62 to 0.81.
+        # Point estimate equals tau, but the interval extends below it.
         self.assertIs(decide_verdict(doc(0.62, 0.70, 0.81), TAU), Verdict.CANT_TELL)
 
     def test_lower_bound_exactly_at_tau_counts_as_ai(self):

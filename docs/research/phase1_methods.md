@@ -22,7 +22,7 @@ published versions.
 | TPR at a fixed FPR (0.01%, 1%, 5%) | Binoculars (0.01%), Fast DetectGPT (1%), DIPPER (1%) | the threshold is often set on the test set |
 | RAID "accuracy" = TPR @ **5%** FPR | RAID paper and leaderboard | **thresholds are set per domain on hidden human test text, an oracle**; so RAID does not test calibration ([detail](phase1/03_newer_methods_and_humanizer_studies.md#12-what-the-metric-is-checked-precisely)) |
 
-The brief asked for "TPR @ 1% FPR on RAID". The RAID paper's tables report only 5%. The leaderboard JSON
+RAID's paper tables report TPR only at 5% FPR, not at 1%. The leaderboard JSON
 files also carry TPR @ 1%, and we quote those where available.
 
 ## Method by method

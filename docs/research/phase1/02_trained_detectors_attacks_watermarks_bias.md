@@ -1,6 +1,6 @@
 # Phase 1: Trained detectors, paraphrase attacks, watermarking, and nonnative writer bias
 
-Detechum research notes. Every number below was copied from the primary source named in the citation. Where I could not read the primary source, or where a number is my own arithmetic on released data, I say so explicitly. **UNVERIFIED** marks anything I could not confirm from the primary text.
+Detechum research notes. Every number below was copied from the primary source named in the citation. Where the primary source could not be read, or where a number is derived arithmetic on released data, the text says so explicitly. **UNVERIFIED** marks anything not confirmed from the primary text.
 
 ## 0. Sources and versions actually read
 
@@ -20,7 +20,7 @@ Detechum research notes. Every number below was copied from the primary source n
 | Park, Jeong & Kim 2026, Style as a Confound (arXiv 2608.26710) | arXiv HTML v1 (27 Aug 2026), full | arxiv.org/html |
 | Zu, Fauss & Li 2025 (AIME Con) | Full PDF (used only as a secondary description of Jiang et al. 2024) | aclanthology.org |
 
-Note on Ghostbuster section numbers: in arXiv v3 the nonnative experiment is **Section 7.3**, while other passages of the same paper say "Section 9" (an internal inconsistency in the paper). I cite 7.3, Table 3 and Appendix B / Table 6.
+Note on Ghostbuster section numbers: in arXiv v3 the nonnative experiment is **Section 7.3**, while other passages of the same paper say "Section 9" (an internal inconsistency in the paper). This report cites 7.3, Table 3 and Appendix B / Table 6.
 
 ---
 
@@ -75,7 +75,7 @@ Ghostbuster tested on three human only nonnative sets, with "accuracy (equivalen
 | RoBERTa | 98.6 | 98.1 | 96.7 |
 | **Ghostbuster** | **95.5** | **99.9** | **74.7** |
 
-Source: [Verma et al. 2024, Table 3](https://arxiv.org/abs/2305.15047). These sets contain only human text, so the implied false positive rate is 100 minus accuracy. For Ghostbuster that gives about 4.5% (Lang8), 0.1% (TOEFL11) and 25.3% (TOEFL 91). That is my arithmetic, not a number stated in the paper. DetectGPT and GPTZero did **not** get oracle thresholding here: "we did not perform oracle thresholding on the precision only evaluation … since it would trivially result in perfect accuracy" ([§5](https://arxiv.org/abs/2305.15047)).
+Source: [Verma et al. 2024, Table 3](https://arxiv.org/abs/2305.15047). These sets contain only human text, so the implied false positive rate is 100 minus accuracy. For Ghostbuster that gives about 4.5% (Lang8), 0.1% (TOEFL11) and 25.3% (TOEFL 91). That is derived arithmetic, not a number stated in the paper. DetectGPT and GPTZero did **not** get oracle thresholding here: "we did not perform oracle thresholding on the precision only evaluation … since it would trivially result in perfect accuracy" ([§5](https://arxiv.org/abs/2305.15047)).
 
 The authors' interpretation: "all tested models had over 95% accuracy, but experienced significant performance drops on the 91 TOEFL essays from previous work … the performance drop on the 91 TOEFL essays and on Lang8 can be largely, though not entirely, attributed to the challenge of classifying shorter documents" ([§7.3](https://arxiv.org/abs/2305.15047)).
 
@@ -95,7 +95,7 @@ Source: [arXiv 1908.09203](https://arxiv.org/abs/1908.09203), §4.3 "Detecting S
 
 **Compute cost.**
 * One forward pass of a 125M or 356M parameter encoder per text ([§4.3](https://arxiv.org/abs/1908.09203)).
-* Training data is the released GPT 2 output dataset (outputs from 124M, 355M, 774M and 1.5B models) together with WebText ([§1, §4.3](https://arxiv.org/abs/1908.09203)). **UNVERIFIED:** the exact training set size is not stated in the section I read.
+* Training data is the released GPT 2 output dataset (outputs from 124M, 355M, 774M and 1.5B models) together with WebText ([§1, §4.3](https://arxiv.org/abs/1908.09203)). **UNVERIFIED:** the exact training set size is not stated in the section that was read.
 * The report notes that "training with random length sequences" improves accuracy on short inputs ([§4.3](https://arxiv.org/abs/1908.09203)).
 
 **Headline numbers (metric: accuracy on a balanced set).**
@@ -358,7 +358,7 @@ Source: [arXiv 2304.02819](https://arxiv.org/abs/2304.02819) (v3). The published
 * ICLR 2023 abstracts (1574 papers): authors based in nonnative English countries had lower perplexity abstracts (P = 0.035; 0.033 after controlling for review rating) ([Results](https://arxiv.org/abs/2304.02819)).
 * Evasion: a self edit prompt cut detection of 31 ChatGPT college essays "from 100% to 13%" ([Results, Fig. 2a](https://arxiv.org/abs/2304.02819)).
 
-**Per detector FPRs.** The paper shows these only as a bar chart (Fig. 1a) and does not state them numerically in the text. **I derived them myself** from the authors' released score files (`Data_and_Results/Human_Data/TOEFL_real_91/*.json` and `HewlettStudentEssay_real_88/*.json` in [the authors' GitHub repo](https://github.com/Weixin-Liang/ChatGPT-Detector-Bias)), counting score > 0.5 as "AI". This threshold **exactly reproduces the paper's stated averages (61.22% and 5.19%)**, which supports the reconstruction. It is still my computation, not a published number.
+**Per detector FPRs.** The paper shows these only as a bar chart (Fig. 1a) and does not state them numerically in the text. **They were derived for this report** from the authors' released score files (`Data_and_Results/Human_Data/TOEFL_real_91/*.json` and `HewlettStudentEssay_real_88/*.json` in [the authors' GitHub repo](https://github.com/Weixin-Liang/ChatGPT-Detector-Bias)), counting score > 0.5 as "AI". This threshold **exactly reproduces the paper's stated averages (61.22% and 5.19%)**, which supports the reconstruction. It is still a derived figure, not a published number.
 
 | Detector | TOEFL 91 FPR (derived) | US 8th grade (n=88) FPR (derived) |
 |---|---|---|
@@ -427,7 +427,7 @@ Source: [arXiv 2602.05769](https://arxiv.org/abs/2602.05769). The venue (EACL 20
 
 ### 5.5 Park, Jeong & Kim 2026, "Style as a Confound" (arXiv 2608.26710)
 
-Source: [arXiv 2608.26710](https://arxiv.org/abs/2608.26710) (v1, 27 Aug 2026). **UNVERIFIED:** an EMNLP 2026 acceptance was reported by a summarizer of the arXiv abstract page. The HTML I read does not state the venue.
+Source: [arXiv 2608.26710](https://arxiv.org/abs/2608.26710) (v1, 27 Aug 2026). **UNVERIFIED:** an EMNLP 2026 acceptance was reported by a summarizer of the arXiv abstract page. The arXiv HTML version does not state the venue.
 
 * **Design:** "135,389 document pairs from a professional English editing service (2018 to 2025), comprising nonnative manuscripts and their native edited versions". Editors are a Wordvice service; the paper says AI rewriting is prohibited by company policy ([Abstract, §3.1](https://arxiv.org/abs/2608.26710)).
 * 13 detectors, off the shelf, with a single fixed threshold of 0.5 ([App. C.0.1](https://arxiv.org/abs/2608.26710)).
@@ -448,7 +448,7 @@ Source: [arXiv 2608.26710](https://arxiv.org/abs/2608.26710) (v1, 27 Aug 2026). 
 
 The authors frame editing style as "a key confounding variable … rather than establishing a full separation of text origin from linguistic style" ([Abstract](https://arxiv.org/abs/2608.26710)).
 
-### 5.6 Synthesis on bias (my reading, with the evidence it rests on)
+### 5.6 Synthesis on bias (interpretation, with the evidence it rests on)
 
 1. **Off the shelf, perplexity based or GPT 2 era detectors at default thresholds** show large nonnative FPRs on short essays. The TOEFL 91 average was 61.22% ([Liang et al. 2023](https://arxiv.org/abs/2304.02819)). The Solaiman RoBERTa detector reached 93.1% FPR on nonnative academic manuscripts at τ=0.5 ([Park et al. 2026, Table 3](https://arxiv.org/abs/2608.26710)).
 2. **Length matters.** On 1,000 full length TOEFL11 essays, every detector Ghostbuster tested scored ≥98.1% accuracy ([Verma et al. 2024, Table 3](https://arxiv.org/abs/2305.15047)).
@@ -477,7 +477,7 @@ Citations for the cells: §§1 to 4 above.
 
 * **Jiang, Hao, Fauss & Li 2024** (Computers & Education 217, 105070): full text and abstract were paywalled (HTTP 403). All numbers about it come from a coauthor's secondary description and are marked UNVERIFIED. The per group FPRs and the nonnative sample size are unknown.
 * **SynthID Text numeric TPR@1%FPR values** and **post paraphrase detection values**: these appear only in figures (Fig. 3, Extended Data Figs. 1 to 4, SI Fig. C3), not in text or tables.
-* **Liang et al. per detector FPRs:** not stated numerically in the paper (Fig. 1a only). The table in §5.1 is my reconstruction from the authors' released data. It matches the paper's stated averages exactly but is still a derived figure.
+* **Liang et al. per detector FPRs:** not stated numerically in the paper (Fig. 1a only). The table in §5.1 is a reconstruction from the authors' released data. It matches the paper's stated averages exactly but is still a derived figure.
 * **Kirchenbauer "Reliability" TPR at low FPR:** plotted only (Figure 21, 0.1% FPR).
 * **RAID TPR@1%FPR for RoBERTa detectors:** plotted only (Figure 4). Tables report 5% FPR.
 * **Ghostbuster AUROC or TPR@FPR:** not reported in the paper (F1 and accuracy only). The paper also does not give model sizes for ada and davinci.
