@@ -20,10 +20,11 @@ from pathlib import Path
 import numpy as np
 import torch
 import transformers
-from scipy.stats import beta, mannwhitneyu
+from scipy.stats import mannwhitneyu
 
 from detechum.scorers.binoculars import BinocularsScorer
 from detechum.scorers.gpttrace import GPTTraceScorer
+from detechum.stats import flag_stats, threshold_for_fpr
 
 # key: (hub repo, pinned revision, local folder written by eval/fetch_models.py, weights file, published SHA 256)
 MODELS = {
@@ -74,24 +75,6 @@ def load_groups(liang_root: Path) -> dict[str, dict]:
 
 def sha256(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
-
-
-def clopper_pearson(k: int, n: int, alpha: float = 0.05) -> tuple[float, float]:
-    lo = 0.0 if k == 0 else float(beta.ppf(alpha / 2, k, n - k + 1))
-    hi = 1.0 if k == n else float(beta.ppf(1 - alpha / 2, k + 1, n - k))
-    return lo, hi
-
-
-def flag_stats(scores: list[float], threshold: float) -> dict:
-    k = int(sum(s > threshold for s in scores))
-    n = len(scores)
-    lo, hi = clopper_pearson(k, n)
-    return {"flagged": k, "n": n, "rate": k / n, "ci95": [lo, hi]}
-
-
-def native_threshold(scores: list[float]) -> float:
-    # Smallest threshold that flags at most TARGET_FPR of the native calibration texts (flag means score > t).
-    return float(np.quantile(np.asarray(scores), 1 - TARGET_FPR, method="higher"))
 
 
 def verify_models(models_root: Path) -> dict[str, Path]:
@@ -148,7 +131,7 @@ def summarize(groups: dict, cached: dict) -> dict:
     for s in scorer_names:
         by_group = {g: [cached[(s, g, i)] for i in range(len(groups[g]["texts"]))] for g in groups}
         native = [v for g, vals in by_group.items() if groups[g]["role"] == "human_native" for v in vals]
-        thresholds = {"native_calibrated_1pct": native_threshold(native)}
+        thresholds = {"native_calibrated_1pct": threshold_for_fpr(native, TARGET_FPR)}
         if s.startswith("gpttrace"):
             thresholds["vendor_9.3"] = GPTTRACE_VENDOR_THRESHOLD
             thresholds["raw_0"] = 0.0

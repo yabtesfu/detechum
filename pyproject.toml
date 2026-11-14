@@ -9,10 +9,10 @@ description = "Open source AI text detection with calibrated, explained and repr
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.12"
-dependencies = []
+dependencies = ["numpy", "scipy"]
 
 [project.optional-dependencies]
-models = ["torch", "transformers", "safetensors", "tokenizers", "numpy", "scipy"]
+models = ["torch", "transformers", "safetensors", "tokenizers"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
