@@ -4,7 +4,9 @@ Data: Liang et al. 2023 (github.com/Weixin-Liang/ChatGPT-Detector-Bias). The rep
 so essays stay in data/external/ and only SHA 256 hashes and scores are written to results/.
 
 Usage:
-    .venv/bin/python eval/bias_experiment.py --liang data/external/liang --out results/bias_v1
+    eval/fetch_models.sh
+    .venv/bin/python eval/bias_experiment.py --liang data/external/liang \
+        --models data/external/models --out results/bias_v1
 """
 
 import argparse
@@ -19,17 +21,21 @@ from pathlib import Path
 import numpy as np
 import torch
 import transformers
-from huggingface_hub import snapshot_download
 from scipy.stats import beta, mannwhitneyu
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from detechum.scorers.binoculars import BinocularsScorer  # noqa: E402
 from detechum.scorers.gpttrace import GPTTraceScorer  # noqa: E402
 
+# key: (hub repo, pinned revision, local folder written by eval/fetch_models.sh, weights file, published SHA 256)
 MODELS = {
-    "gpttrace": ("nakas/gpttrace-v8s-1b", "ac748e32ca8c90bb8858fadc427757728e27b063"),
-    "qwen_base": ("Qwen/Qwen2.5-1.5B", "8faed761d45a263340a0528343f099c05c9a4323"),
-    "qwen_instruct": ("Qwen/Qwen2.5-1.5B-Instruct", "989aa7980e4cf806f80c7fef2b1adb7bc71aa306"),
+    "gpttrace": ("nakas/gpttrace-v8s-1b", "ac748e32ca8c90bb8858fadc427757728e27b063", "gpttrace-v8s-1b",
+                 "model/model.safetensors", "379b154cadb0fd6a226badd2f745705f49c19461ef150ee6b97fec92e82ba538"),
+    "qwen_base": ("Qwen/Qwen2.5-1.5B", "8faed761d45a263340a0528343f099c05c9a4323", "qwen2.5-1.5b",
+                  "model.safetensors", "a961db72e75d52b18e6b0c9d379e51a26973b233385e0e127fdda7d648aec796"),
+    "qwen_instruct": ("Qwen/Qwen2.5-1.5B-Instruct", "989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+                      "qwen2.5-1.5b-instruct", "model.safetensors",
+                      "dd924a11b4c220f385b51ffa522daea7c9f3d850e31b162bb5661df483c6d3ee"),
 }
 
 # (folder, role). "ai_edited" groups are human essays rewritten by GPT 4; they are neither human nor
@@ -90,15 +96,27 @@ def native_threshold(scores: list[float]) -> float:
     return float(np.quantile(np.asarray(scores), 1 - TARGET_FPR, method="higher"))
 
 
-def build_scorers(device: str):
-    paths = {key: snapshot_download(repo, revision=rev) for key, (repo, rev) in MODELS.items()}
+def verify_models(models_root: Path) -> dict[str, Path]:
+    paths = {}
+    for key, (repo, _rev, folder, weights, expected) in MODELS.items():
+        digest = hashlib.sha256()
+        with (models_root / folder / weights).open("rb") as fh:
+            for chunk in iter(lambda: fh.read(1 << 24), b""):
+                digest.update(chunk)
+        if digest.hexdigest() != expected:
+            raise SystemExit(f"{repo}: {weights} does not match the published SHA 256; rerun eval/fetch_models.sh")
+        paths[key] = models_root / folder
+    return paths
+
+
+def build_scorers(paths: dict[str, Path], device: str):
     yield lambda: GPTTraceScorer(paths["gpttrace"], device, typography=False)
     yield lambda: GPTTraceScorer(paths["gpttrace"], device, typography=True)
     yield lambda: BinocularsScorer(paths["qwen_base"], paths["qwen_instruct"], device,
                                    name="binoculars_style_qwen2.5_1.5b_pair_unvalidated")
 
 
-def score_all(groups: dict, out: Path, device: str) -> dict:
+def score_all(groups: dict, paths: dict[str, Path], out: Path, device: str) -> dict:
     cache_file = out / "scores.jsonl"
     cached = {}
     if cache_file.exists():
@@ -106,7 +124,7 @@ def score_all(groups: dict, out: Path, device: str) -> dict:
             r = json.loads(line)
             cached[(r["scorer"], r["group"], r["index"])] = r["ai_score"]
     with cache_file.open("a") as fh:
-        for make in build_scorers(device):
+        for make in build_scorers(paths, device):
             scorer = make()
             for gname, g in groups.items():
                 todo = [i for i in range(len(g["texts"])) if (scorer.name, gname, i) not in cached]
@@ -162,7 +180,8 @@ def environment(liang_root: Path) -> dict:
                                   capture_output=True, text=True).stdout.strip()
     return {"python": platform.python_version(), "torch": torch.__version__,
             "transformers": transformers.__version__, "machine": platform.machine(),
-            "liang_commit": liang_commit, "models": {k: {"repo": r, "revision": v} for k, (r, v) in MODELS.items()},
+            "liang_commit": liang_commit,
+            "models": {k: {"repo": m[0], "revision": m[1], "weights_sha256": m[4]} for k, m in MODELS.items()},
             "seed": SEED, "target_fpr": TARGET_FPR}
 
 
@@ -195,13 +214,15 @@ def render_report(result: dict) -> str:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--liang", type=Path, required=True)
+    ap.add_argument("--models", type=Path, default=Path("data/external/models"))
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--device", default="mps" if torch.backends.mps.is_available() else "cpu")
     args = ap.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
 
     groups = load_groups(args.liang)
-    cached = score_all(groups, args.out, args.device)
+    paths = verify_models(args.models)
+    cached = score_all(groups, paths, args.out, args.device)
     result = {"environment": environment(args.liang), "results": summarize(groups, cached)}
     (args.out / "metrics.json").write_text(json.dumps(result, indent=2))
     (args.out / "report.md").write_text(render_report(result))
