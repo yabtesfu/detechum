@@ -19,8 +19,8 @@ class Verdict(Enum):
 @dataclass(frozen=True)
 class ScoredDocument:
     p_ai: float            # calibrated point estimate, 0..1
-    p_low: float           # 5th percentile of the bootstrap interval
-    p_high: float          # 95th percentile of the bootstrap interval
+    p_low: float           # lower bound of the 90% interval (detechum.calibration)
+    p_high: float          # upper bound of the 90% interval
     n_words: int
     stratum_calibrated: bool   # calibration data exists for this language, domain and writer group
 

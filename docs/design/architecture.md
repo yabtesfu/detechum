@@ -119,6 +119,8 @@ Three separate layers, each answering a different question:
 2. **Interval**: bootstrap the calibration split (B = 1000), refit the map each time, and report the 5th to 95th
    percentile of P(AI) for this score. Answers: "how sure are we of that fraction, given finite
    calibration data?" Wide intervals occur where calibration data is thin, and the report says so.
+   The range is widened to the exact binomial interval of the pooled block the score falls in. Without
+   that, a block holding only AI texts would report a range of zero width, however few texts it holds.
 3. **Abstain / verdict**: split conformal prediction (Mondrian, per stratum; per length bin as in
    Multiscaled Conformal Prediction, which cut Binoculars' realized FPR from 7.68% to 0.72%, see Phase 1) at the chosen error rate.
    If the prediction set is {AI, human}, the verdict is "Can't tell reliably". Answers: "can we commit to a
@@ -204,7 +206,8 @@ Hard rules (enforced in code and tests):
 ## 8. Open decisions
 
 * Minimum length for a verdict (candidates: 100 or 150 words), decide from the length stratified curves in
-  the evaluation plan, not in advance.
+  the evaluation plan, not in advance. The code uses 150 for now. At that value none of the 91 TOEFL
+  essays of the pilot data is long enough for a verdict (evaluation plan §8).
 * Which open scorer models to host (memory and latency budget vs. accuracy). Decide after reproducing Phase 1
   numbers locally.
 * How to name the abstain state in the UI.

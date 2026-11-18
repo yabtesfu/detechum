@@ -31,3 +31,25 @@ experiments in `eval/`.
 which is not committed. Weights download as 32 MB ranges over parallel connections, and a stalled
 connection is retried automatically. If the run is interrupted, start it again: completed ranges are kept.
 Each assembled file is checked against the SHA 256 published for its pinned revision.
+
+## Scoring a text
+
+```bash
+.venv/bin/detechum score essay.txt --calibration results/calibration_pilot_v1/calibration.json
+```
+
+The command removes invisible characters and lookalike letters, scores the text with GPTTrace v8s 1B, maps the
+score to P(AI) with a 90% interval and prints a verdict with its reasons. Use `-` as the file name to read
+standard input, and `--json` for the full result. Without `--calibration` it prints the raw score and no
+verdict.
+
+Current limits:
+
+* The only calibration file is a pilot fitted on 746 texts from 2023
+  ([report](results/calibration_pilot_v1/report.md)). Its probabilities are not validated for any real use.
+* Texts under 150 words get no verdict.
+* GPTTrace reads at most 512 tokens. For longer texts only the beginning is scored, and the output says so.
+* Sentence level reasons are not implemented yet.
+
+`.venv/bin/python eval/calibration_pilot.py` rebuilds the pilot calibration and its report from the committed
+scores. It needs no model weights.

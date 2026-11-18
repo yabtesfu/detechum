@@ -218,3 +218,42 @@ What the pilot means for this plan:
 4. **AI edited human text has no label in this plan.** Both edited groups were scored and left out of the
    AUROC. The reporting choice is an open decision in the
    [architecture](../design/architecture.md#8-open-decisions).
+
+### calibration_pilot_v1 (18 Nov 2026)
+
+* **Question:** does the calibration layer (isotonic map, interval, threshold choice, verdict rule) give
+  calibrated probabilities on held out texts?
+* **Data:** the GPTTrace scores of bias_v1, typography option off. 394 human and 352 AI texts. The AI edited
+  groups and the length matched control take no part in fitting or in the metrics.
+* **Method:** five fold cross validation, folds stratified by group, seed `20261118`. Each fold fits the map
+  and chooses tau for a 1% FPR target on its training part, then scores its held out part.
+* **Harness:** `eval/calibration_pilot.py`. Outputs:
+  [`results/calibration_pilot_v1/`](../../results/calibration_pilot_v1/report.md).
+
+Held out results:
+
+| Measure | Value |
+|---|---|
+| ECE, 15 equal mass bins | 0.0061 |
+| Brier score | 0.0197 |
+| Human texts of 150 or more words labelled "Likely AI" | 2/239 = 0.8% (0.1 to 3.0) |
+| Human texts of any length with the lower bound at or above tau | 3/394 = 0.8% (0.2 to 2.2) |
+| AI texts of 150 or more words labelled "Likely AI" | 57/57 |
+| TOEFL essays long enough for a verdict | 0/91 |
+
+Limits:
+
+* Every limit of bias_v1 applies. The folds share one source and one domain mix, so the ECE says nothing
+  about new domains or current generators and must not be compared with the M2 release target.
+* tau is 0.5 in every fold. That is the floor the code sets so that a "likely" label never rests on less
+  than even odds. The 1% target alone would have allowed a lower threshold.
+* P(AI) is the share of AI texts among calibration texts with a similar score. It assumes the 394 to 352
+  mix of this set. A reader with a different prior needs a different map.
+* The conformal abstention layer of the architecture is not implemented. Abstention comes from the
+  interval rule only.
+
+What the pilot means for this plan:
+
+1. **The provisional 150 word minimum removes the whole nonnative group of this corpus from the verdict.**
+   The length stratified curves that decide the minimum (§1) need nonnative texts above and below it.
+2. **The calibration file in the results folder is for testing the pipeline only.** No release may use it.
