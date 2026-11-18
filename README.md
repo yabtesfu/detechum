@@ -39,8 +39,10 @@ Each assembled file is checked against the SHA 256 published for its pinned revi
 ```
 
 The command removes invisible characters and lookalike letters, scores the text with GPTTrace v8s 1B, maps the
-score to P(AI) with a 90% interval and prints a verdict with its reasons. Use `-` as the file name to read
-standard input, and `--json` for the full result. Without `--calibration` it prints the raw score and no
+score to P(AI) with a 90% interval and prints a verdict with its reasons. It then removes each sentence in
+turn, scores the rest again, and lists the sentences whose removal lowers the score most. Use `-` as the
+file name to read standard input, `--json` for the full result and `--no-explain` to skip the sentence
+analysis, which needs one scorer pass per sentence. Without `--calibration` it prints the raw score and no
 verdict.
 
 Current limits:
@@ -49,7 +51,11 @@ Current limits:
   ([report](results/calibration_pilot_v1/report.md)). Its probabilities are not validated for any real use.
 * Texts under 150 words get no verdict.
 * GPTTrace reads at most 512 tokens. For longer texts only the beginning is scored, and the output says so.
-* Sentence level reasons are not implemented yet.
+* The sentence list shows what moves the score, not which sentences are AI written. In a test with one
+  planted AI sentence per essay, the top ranked sentence was the planted one in 27 of 50 essays
+  ([report](results/attribution_pilot_v1/report.md)).
+* Reasons based on word predictability are not shown. That signal runs higher for nonnative writers
+  ([report](results/explanation_pilot_v1/report.md)).
 
 `.venv/bin/python eval/calibration_pilot.py` rebuilds the pilot calibration and its report from the committed
 scores. It needs no model weights.

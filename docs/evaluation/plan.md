@@ -257,3 +257,54 @@ What the pilot means for this plan:
 1. **The provisional 150 word minimum removes the whole nonnative group of this corpus from the verdict.**
    The length stratified curves that decide the minimum (§1) need nonnative texts above and below it.
 2. **The calibration file in the results folder is for testing the pipeline only.** No release may use it.
+
+### explanation_pilot_v1 (18 Nov 2026)
+
+* **Question:** is the top 1 token rate, the first signal of the explanation templates, higher for nonnative
+  human text than for native human text of the same length?
+* **Data and control:** as in bias_v1. **Language model:** Qwen 2.5 1.5B base, bfloat16, first 512 tokens.
+* **Harness:** `eval/explanation_pilot.py`, with the decision rule written in the script before the run.
+  Outputs: [`results/explanation_pilot_v1/`](../../results/explanation_pilot_v1/report.md).
+
+| Measure | TOEFL essays, nonnative | Native essays cut to the same lengths |
+|---|---|---|
+| Median top 1 token rate | 0.440 | 0.376 |
+| Above the rate exceeded by 1% of native essays (`0.534`) | 4/91 = 4.4% (1.2 to 10.9) | 1/91 = 1.1% (0.0 to 6.0) |
+| Above the median of the length matched native essays | 83/91 | 45/91 |
+
+The probability that a TOEFL essay has a higher rate than a length matched native essay is 0.793. The rate
+alone separates the AI groups from the human groups with an AUROC of 0.871.
+
+Outcome under the fixed rule: **undecided**, because the two intervals in the second row overlap. The
+signal is not admitted: 91 essays cannot show a pass, and the third row shows that a comparison with "the
+human median" would place 9 of 10 nonnative essays above it. The template that uses this comparison stays
+out of the report until a reference that accounts for writer group and length passes the test.
+
+### attribution_pilot_v1 (18 Nov 2026)
+
+* **Question:** when sentences are ranked by how much the score drops on removal, is the top ranked
+  sentence the AI written one?
+* **Data:** 50 native essays (Hewlett), first 250 words at most, each with one sentence from a GPT 3 college
+  essay planted at a random position. Seed `20261118`. Scorer: GPTTrace v8s 1B, typography option off.
+* **Harness:** `eval/attribution_pilot.py`, with the reading of the result written in the script before the
+  run. Outputs: [`results/attribution_pilot_v1/`](../../results/attribution_pilot_v1/report.md).
+
+| Measure | Observed | Chance |
+|---|---|---|
+| Planted sentence ranked first | 27/50 = 54.0% (39.3 to 68.2) | 6.9% |
+| Planted sentence in the top 3 | 30/50 = 60.0% (45.2 to 73.6) | 20.8% |
+| Planted sentence raises the score by 1.0 or more | 11/50 = 22.0% (11.5 to 36.0) | |
+| Human first sentence ranked first, planted sentence elsewhere | 9/48 = 18.8% (8.9 to 32.6) | 6.9% |
+
+Outcome under the fixed reading: the ranking locates the planted sentence better than chance. It is wrong
+in almost half of the essays, and the first sentence of a text ranks first more often than chance.
+
+Limits:
+
+* One planted sentence in a human essay is one of many mixed authorship cases. The median document score
+  stays near `-8` after planting, far below any decision threshold, so this run says nothing about texts
+  near the threshold.
+* The display minimum of 1.0 was chosen before the run and is not tuned. At that value most single planted
+  sentences would not be listed.
+* An earlier run stopped after 11 essays because a planted sentence merged with its neighbour during
+  sentence splitting. It wrote no results. The script now uses only plantings that split cleanly.

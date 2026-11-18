@@ -1,0 +1,222 @@
+{
+ "environment": {
+  "python": "3.14.9",
+  "torch": "2.15.0",
+  "transformers": "5.23.0",
+  "machine": "arm64",
+  "liang_commit": "1d05ed8242d4694a0ed7b73a79c52be8864470f9",
+  "target_fpr": 0.01,
+  "model": {
+   "repo": "Qwen/Qwen2.5-1.5B",
+   "revision": "8faed761d45a263340a0528343f099c05c9a4323",
+   "weights_sha256": "a961db72e75d52b18e6b0c9d379e51a26973b233385e0e127fdda7d648aec796"
+  }
+ },
+ "results": {
+  "threshold_native_1pct": 0.5337837837837838,
+  "native_median_top1_rate": 0.4207436399217221,
+  "auroc_ai_vs_all_human": 0.8711279995385325,
+  "auroc_nonnative_vs_length_matched_native": 0.7932616833715734,
+  "outcome": "undecided",
+  "groups": {
+   "TOEFL_real_91": {
+    "role": "human_nonnative",
+    "n": 91,
+    "median_top1_rate": 0.43956043956043955,
+    "quartiles": [
+     0.4051488833746898,
+     0.48604380693932936
+    ],
+    "above_threshold": {
+     "flagged": 4,
+     "n": 91,
+     "rate": 0.04395604395604396,
+     "ci95": [
+      0.012104567309986977,
+      0.10873490941679793
+     ]
+    }
+   },
+   "HewlettStudentEssay_real_88": {
+    "role": "human_native",
+    "n": 88,
+    "median_top1_rate": 0.40903403804818583,
+    "quartiles": [
+     0.3715329950857111,
+     0.448419840184292
+    ],
+    "above_threshold": {
+     "flagged": 1,
+     "n": 88,
+     "rate": 0.011363636363636364,
+     "ci95": [
+      0.00028766098110156557,
+      0.06169375395938655
+     ]
+    }
+   },
+   "CollegeEssay_real_70": {
+    "role": "human_native",
+    "n": 70,
+    "median_top1_rate": 0.4227005870841487,
+    "quartiles": [
+     0.40117416829745595,
+     0.44960861056751467
+    ],
+    "above_threshold": {
+     "flagged": 0,
+     "n": 70,
+     "rate": 0.0,
+     "ci95": [
+      0.0,
+      0.05133379715102374
+     ]
+    }
+   },
+   "CS224N_real_145": {
+    "role": "human_unknown",
+    "n": 145,
+    "median_top1_rate": 0.4883177570093458,
+    "quartiles": [
+     0.4550898203592814,
+     0.5154185022026432
+    ],
+    "above_threshold": {
+     "flagged": 22,
+     "n": 145,
+     "rate": 0.15172413793103448,
+     "ci95": [
+      0.09759395092107469,
+      0.22065385924043857
+     ]
+    }
+   },
+   "TOEFL_gpt4polished_91": {
+    "role": "ai_edited",
+    "n": 91,
+    "median_top1_rate": 0.45454545454545453,
+    "quartiles": [
+     0.4049598623853211,
+     0.4812302125734962
+    ],
+    "above_threshold": {
+     "flagged": 5,
+     "n": 91,
+     "rate": 0.054945054945054944,
+     "ci95": [
+      0.01807892650697888,
+      0.12358107731838751
+     ]
+    }
+   },
+   "HewlettStudentEssay_GPTsimplify_88": {
+    "role": "ai_edited",
+    "n": 88,
+    "median_top1_rate": 0.4667146654851573,
+    "quartiles": [
+     0.4398484848484848,
+     0.49564835807796387
+    ],
+    "above_threshold": {
+     "flagged": 5,
+     "n": 88,
+     "rate": 0.056818181818181816,
+     "ci95": [
+      0.018703863483034107,
+      0.12763240126903339
+     ]
+    }
+   },
+   "CollegeEssay_gpt3_31": {
+    "role": "ai",
+    "n": 31,
+    "median_top1_rate": 0.6230366492146597,
+    "quartiles": [
+     0.5986171379524104,
+     0.652226045250756
+    ],
+    "above_threshold": {
+     "flagged": 30,
+     "n": 31,
+     "rate": 0.967741935483871,
+     "ci95": [
+      0.8329788837697722,
+      0.9991836299281533
+     ]
+    }
+   },
+   "CollegeEssay_gpt3PromptEng_31": {
+    "role": "ai",
+    "n": 31,
+    "median_top1_rate": 0.45652173913043476,
+    "quartiles": [
+     0.43210565476190477,
+     0.487430873520842
+    ],
+    "above_threshold": {
+     "flagged": 3,
+     "n": 31,
+     "rate": 0.0967741935483871,
+     "ci95": [
+      0.0204198626877921,
+      0.2575390646277355
+     ]
+    }
+   },
+   "CS224N_gpt3_145": {
+    "role": "ai",
+    "n": 145,
+    "median_top1_rate": 0.6021505376344086,
+    "quartiles": [
+     0.5692307692307692,
+     0.6346153846153846
+    ],
+    "above_threshold": {
+     "flagged": 127,
+     "n": 145,
+     "rate": 0.8758620689655172,
+     "ci95": [
+      0.810919084604511,
+      0.9247408437594714
+     ]
+    }
+   },
+   "CS224N_gpt3PromptEng_145": {
+    "role": "ai",
+    "n": 145,
+    "median_top1_rate": 0.5176470588235295,
+    "quartiles": [
+     0.4810126582278481,
+     0.5555555555555556
+    ],
+    "above_threshold": {
+     "flagged": 57,
+     "n": 145,
+     "rate": 0.3931034482758621,
+     "ci95": [
+      0.3130958235580039,
+      0.4775724490461418
+     ]
+    }
+   },
+   "control/Hewlett_truncated_to_TOEFL_lengths": {
+    "role": "human_native_length_matched",
+    "n": 91,
+    "median_top1_rate": 0.376,
+    "quartiles": [
+     0.3458831808585503,
+     0.41780760223383173
+    ],
+    "above_threshold": {
+     "flagged": 1,
+     "n": 91,
+     "rate": 0.01098901098901099,
+     "ci95": [
+      0.0002781789712100313,
+      0.059710812816331664
+     ]
+    }
+   }
+  }
+ }
+}

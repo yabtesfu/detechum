@@ -1,0 +1,56 @@
+{
+ "seed": 20261118,
+ "scorer": "gpttrace_v8s_1b_typography_off",
+ "min_contribution": 1.0,
+ "model": {
+  "repo": "nakas/gpttrace-v8s-1b",
+  "revision": "ac748e32ca8c90bb8858fadc427757728e27b063"
+ },
+ "planted": {
+  "ranked_first": {
+   "k": 27,
+   "n": 50,
+   "rate": 0.54,
+   "ci95": [
+    0.3932419761169223,
+    0.6818508214313913
+   ]
+  },
+  "ranked_in_top_3": {
+   "k": 30,
+   "n": 50,
+   "rate": 0.6,
+   "ci95": [
+    0.4517940284791804,
+    0.7359216049054632
+   ]
+  },
+  "chance_ranked_first": 0.06927616200897262,
+  "chance_ranked_in_top_3": 0.20782848602691784,
+  "contribution_at_least_min": {
+   "k": 11,
+   "n": 50,
+   "rate": 0.22,
+   "ci95": [
+    0.11526582603784857,
+    0.3596118885657894
+   ]
+  },
+  "median_contribution": 0.32653093338012695,
+  "median_score_change_from_planting": 0.32653141021728516
+ },
+ "human_first_sentence": {
+  "ranked_first": {
+   "k": 9,
+   "n": 48,
+   "rate": 0.1875,
+   "ci95": [
+    0.08949838184937278,
+    0.3262930239567135
+   ]
+  },
+  "chance": 0.06893846241014012,
+  "median_contribution": 0.12389326095581055
+ },
+ "locates_planted_sentence": true
+}
