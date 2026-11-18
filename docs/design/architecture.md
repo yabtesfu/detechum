@@ -62,8 +62,8 @@ the scoring stage computes:
 | Scorer | Role | Why (evidence in [Phase 1](../research/phase1_methods.md#what-this-means-for-detechums-design)) |
 |---|---|---|
 | Open supervised encoder (Ettin / ModernBERT / DeBERTa family), fine tuned with adversarial **and humanizer** outputs | **primary document signal** | best open RAID results (e.g. GPTTrace Ettin 1B 99.54 TPR@1%); humanizer aware training is the only approach with evidence of surviving humanizers (DAMAGE, vendor authored). Generalization measured on held out humanizers |
-| Binoculars style cross perplexity ratio | second, partly independent signal + explanations | zero shot, TPR@0.01%FPR 0.935 to 0.976 in its paper and stable under DIPPER, but **drops to 28% TPR@5% on commercially humanized text**, so it cannot be the only signal |
-| Fast DetectGPT conditional curvature | optional third signal | zero shot, 1 to 2 passes; check its value against Binoculars before shipping both |
+| Binoculars style cross perplexity ratio | candidate second signal, **not admitted to the verdict yet** (see §2.4) | zero shot, TPR@0.01%FPR 0.935 to 0.976 in its paper and stable under DIPPER, but **drops to 28% TPR@5% on commercially humanized text**, so it cannot be the only signal. In the local pilot, an unvalidated Qwen 2.5 1.5B pair flagged 52.7% of nonnative essays at a threshold that flags 1% of native essays |
+| Fast DetectGPT conditional curvature | optional third signal, subject to the same admission test (§2.4) | zero shot, 1 to 2 passes; check its value against Binoculars before shipping both |
 | Token rank / entropy features (GLTR family) | **explanation layer** | easy to read ("top 1 prediction"); weak alone (RAID 62.6 → 47.2 under paraphrase) |
 | Style features (sentence length variance, transition phrase density, type to token ratio) | explanation layer only | readable; never used alone for the verdict |
 
@@ -72,13 +72,42 @@ new reliability diagram (see §4).
 
 ### 2.3 Aggregate
 
-* **Document score**: a small logistic model over scorer outputs plus length features, fitted on the
-  calibration split only. Kept small so it stays explainable and auditable.
+* **Document score**: a small logistic model over the outputs of admitted scorers (§2.4) plus length
+  features, fitted on the calibration split only. Kept small so it stays explainable and auditable.
 * **Sentence scores**: the same scorers on a sliding window (sentence ± neighbours). Sentence level scores
   are noisier than document level ones. The UI marks them as lower confidence, and they have their
   own calibration curve.
 * **Mixed authorship** (later milestone): change point detection over the per token score series, to
   report "sentences 8 to 14 look different from the rest" instead of one blended number.
+
+### 2.4 Admission test for scorers that feed the verdict
+
+A scorer's output enters the document score only after the scorer passes the nonnative gate of the
+evaluation plan ([M3](../evaluation/plan.md#m3-nonnative-false-positive-rate)) on its own: at the threshold
+that flags 1% of native human text, the upper bound of the nonnative FPR is ≤ 2% and the nonnative to
+native FPR ratio is ≤ 1.5. A scorer that fails stays out of the document score and the verdict. The
+aggregate is fitted on calibration data, so it cannot be relied on to cancel a large bias in strata where
+nonnative calibration data is thin.
+
+Pilot evidence ([`results/bias_v1/report.md`](../../results/bias_v1/report.md), described in
+[evaluation plan §8](../evaluation/plan.md#8-pilot-runs-recorded-before-tagging)), with 95% Clopper Pearson
+intervals:
+
+| Scorer | Threshold | Nonnative essays flagged (TOEFL) | Native essays cut to the same lengths | AUROC |
+|---|---|---|---|---|
+| GPTTrace v8s 1B | flags 1% of native essays (`7.945`) | 2/91 = 2.2% (0.3 to 7.7) | 1/91 = 1.1% (0.0 to 6.0) | 0.997 |
+| GPTTrace v8s 1B | model card value (`9.3`) | 0/91 = 0.0% (0.0 to 4.0) | 0/91 = 0.0% (0.0 to 4.0) | 0.997 |
+| Binoculars style ratio, Qwen 2.5 1.5B base and instruct | flags 1% of native essays (`-0.958`) | 48/91 = 52.7% (42.0 to 63.3) | 1/91 = 1.1% (0.0 to 6.0) | 0.831 |
+
+What follows from the pilot:
+
+* **The supervised encoder stays the primary signal.** GPTTrace has not passed the gate yet. It has not
+  failed it either: 91 nonnative essays with none flagged give an upper bound of 4.0%, and the gate's 2%
+  bound needs at least 183 nonnative texts with none flagged.
+* **The Binoculars style ratio with this model pair is excluded from the verdict.** The pair is not the one
+  from the Binoculars paper (Falcon 7B and Falcon 7B Instruct), and that paper reports 99.67% accuracy on
+  ESL essays. The pilot result therefore applies to the Qwen pair only. A validated pair can be admitted
+  if it passes the same test.
 
 ## 3. (a) P(AI) with an uncertainty range
 
@@ -179,3 +208,10 @@ Hard rules (enforced in code and tests):
 * Which open scorer models to host (memory and latency budget vs. accuracy). Decide after reproducing Phase 1
   numbers locally.
 * How to name the abstain state in the UI.
+* How to report human writing that an AI edited. In the pilot, GPTTrace at its model card threshold flags
+  75/91 (82.4%) of TOEFL essays polished by GPT 4 and 40/88 (45.5%) of native essays simplified by GPT. A two
+  way verdict has no accurate answer for these texts. Candidates: a separate "AI edited" label, a softer
+  verdict for this case, or a note in the explanation.
+* Whether the token rank and entropy features of the explanation layer show the same nonnative skew as the
+  perplexity ratio. They rest on the same predictability signal and have not been tested. Test them on the
+  nonnative stratum before they appear next to a verdict.

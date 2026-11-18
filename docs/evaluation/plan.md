@@ -166,3 +166,55 @@ named detector's result.
 3. **Agreement with independent detectors** on the probe set, each through its official API.
 4. **Blind human raters** for revision mode meaning preservation.
 5. **Published per stratum error rates** that others can check against their own corpora, including nonnative ones.
+
+## 8. Pilot runs recorded before tagging
+
+This plan is not tagged yet. Runs made before the tag are listed here so that they cannot shape the metrics
+unnoticed. No metric or pass criterion in §2 was changed after these results were seen.
+
+### bias_v1 (GPTTrace scored 14 Nov 2026, Binoculars style ratio scored 18 Nov 2026)
+
+* **Question:** do open detectors flag nonnative writers more often than native writers of the same text
+  length?
+* **Data:** the repository of [Liang et al. 2023](https://arxiv.org/abs/2304.02819) at commit
+  `1d05ed8242d4694a0ed7b73a79c52be8864470f9`, 925 texts in 10 groups. It belongs to no split of §1. The
+  repository has no license, so the outputs hold a SHA 256 and a score per text and no essay text.
+* **Control:** 91 native essays (Hewlett) truncated to the word counts of the 91 TOEFL essays, seed
+  `20261114`.
+* **Harness:** `eval/bias_experiment.py`. Outputs: [`results/bias_v1/`](../../results/bias_v1/report.md).
+  Model revisions, weight checksums and library versions are in `metrics.json`.
+* **Threshold:** the 99th percentile of the scores of the 158 native essays, so that it flags 1% of them.
+
+| Group | n | GPTTrace v8s 1B at `7.945` | GPTTrace at model card `9.3` | Binoculars style ratio (Qwen 2.5 1.5B pair) at `-0.958` |
+|---|---|---|---|---|
+| TOEFL essays, nonnative | 91 | 2.2% (0.3 to 7.7) | 0.0% (0.0 to 4.0) | 52.7% (42.0 to 63.3) |
+| Native essays cut to TOEFL lengths | 91 | 1.1% (0.0 to 6.0) | 0.0% (0.0 to 4.0) | 1.1% (0.0 to 6.0) |
+| CS224N abstracts, labeled human | 145 | 13.1% (8.1 to 19.7) | 1.4% (0.2 to 4.9) | 17.9% (12.1 to 25.2) |
+| TOEFL essays polished by GPT 4 | 91 | 91.2% (83.4 to 96.1) | 82.4% (73.0 to 89.6) | 26.4% (17.7 to 36.7) |
+| GPT 3 text, four groups | 31 to 145 | 96.6% to 100% | 89.0% to 100% | 6.5% to 93.8% |
+| AUROC, AI against all human groups | | 0.997 | 0.997 | 0.831 |
+
+GPTTrace figures are for the typography option off. With the option on, the native threshold is `8.091` and
+the rates in this table move by at most 2.8 points.
+
+Limits:
+
+* Groups hold 31 to 145 texts, so every interval is wide.
+* The threshold is fitted on the same native essays it is reported on, and the control texts are cut from
+  essays in that set. The native rates are therefore optimistic.
+* The AI text is from GPT 3 and GPT 4 in 2023. Detection rates on current models are unknown.
+* The Binoculars style scorer uses a Qwen 2.5 1.5B base and instruct pair that has not been validated
+  against the reference implementation (Falcon 7B pair). Its result does not transfer to the reference.
+
+What the pilot means for this plan:
+
+1. **M3 needs more nonnative text than this corpus has.** With no text flagged, the 95% upper bound reaches
+   2% only at n ≥ 183. The 91 TOEFL essays cannot pass or fail the gate alone.
+2. **Thresholds do not carry across domains.** The essay threshold flags 13.1% (GPTTrace) and 17.9%
+   (Binoculars style ratio) of the human CS224N abstracts. This supports the per stratum thresholds of §1
+   and M3.
+3. **The probe set (§6) must not treat the Qwen pair as a neutral reference.** Its scores on the nonnative
+   probe group are reported with this bias stated, or a validated pair replaces it.
+4. **AI edited human text has no label in this plan.** Both edited groups were scored and left out of the
+   AUROC. The reporting choice is an open decision in the
+   [architecture](../design/architecture.md#8-open-decisions).

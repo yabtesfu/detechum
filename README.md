@@ -11,6 +11,8 @@ Open-source AI content detection and analysis platform focused on accuracy, expl
 | 3: Architecture                  | [docs/design/architecture.md](docs/design/architecture.md)                                                                                     |
 | 4: Preregistered evaluation plan | [docs/evaluation/plan.md](docs/evaluation/plan.md)                                                                                             |
 
+Pilot results on nonnative writer bias, with per text scores: [results/bias_v1/report.md](results/bias_v1/report.md).
+
 ## Development
 
 Requirements: Python 3.12 or newer and [uv](https://docs.astral.sh/uv/).
