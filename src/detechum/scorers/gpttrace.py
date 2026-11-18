@@ -33,6 +33,11 @@ class GPTTraceScorer:
         self.model = AutoModelForSequenceClassification.from_pretrained(snapshot / "model").to(device).eval()
         self.device = device
 
+    def is_truncated(self, text: str) -> bool:
+        """True when `text` exceeds the input limit, so `score` sees only its beginning."""
+        ids = self.tokenizer(self._normalize(text, typography=self.typography), truncation=False)["input_ids"]
+        return len(ids) > MAX_TOKENS
+
     @torch.inference_mode()
     def score(self, texts: list[str], batch_size: int = 8) -> list[float]:
         out: list[float] = []

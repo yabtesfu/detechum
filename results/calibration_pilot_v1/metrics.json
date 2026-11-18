@@ -1,0 +1,283 @@
+{
+ "scorer": "gpttrace_v8s_1b_typography_off",
+ "scores_file": "results/bias_v1/scores.jsonl",
+ "scores_sha256": "bc35e74d08e4ba868c54e97681697a88106d626c3f80c4eb01eec97637a7c16d",
+ "seed": 20261118,
+ "target_fpr": 0.01,
+ "n_human": 394,
+ "n_ai": 352,
+ "cross_validation": {
+  "folds": 5,
+  "ece": 0.006075148491642256,
+  "brier": 0.019691060108617355,
+  "tau_per_fold": [
+   0.5,
+   0.5,
+   0.5,
+   0.5,
+   0.5
+  ],
+  "reliability_bins": [
+   {
+    "n": 50,
+    "mean_predicted": 0.0,
+    "observed": 0.0,
+    "ci95": [
+     0.0,
+     0.07112173646419764
+    ]
+   },
+   {
+    "n": 50,
+    "mean_predicted": 0.0,
+    "observed": 0.0,
+    "ci95": [
+     0.0,
+     0.07112173646419764
+    ]
+   },
+   {
+    "n": 50,
+    "mean_predicted": 0.0,
+    "observed": 0.0,
+    "ci95": [
+     0.0,
+     0.07112173646419764
+    ]
+   },
+   {
+    "n": 50,
+    "mean_predicted": 0.0,
+    "observed": 0.0,
+    "ci95": [
+     0.0,
+     0.07112173646419764
+    ]
+   },
+   {
+    "n": 50,
+    "mean_predicted": 0.0,
+    "observed": 0.02,
+    "ci95": [
+     0.000506227983040829,
+     0.1064695457114999
+    ]
+   },
+   {
+    "n": 50,
+    "mean_predicted": 0.011614253858666261,
+    "observed": 0.02,
+    "ci95": [
+     0.000506227983040829,
+     0.1064695457114999
+    ]
+   },
+   {
+    "n": 50,
+    "mean_predicted": 0.021258438197800406,
+    "observed": 0.04,
+    "ci95": [
+     0.004881433426164379,
+     0.1371376256039674
+    ]
+   },
+   {
+    "n": 50,
+    "mean_predicted": 0.17582820649642453,
+    "observed": 0.14,
+    "ci95": [
+     0.0581917003403721,
+     0.2673960024970084
+    ]
+   },
+   {
+    "n": 50,
+    "mean_predicted": 0.9076857010553446,
+    "observed": 0.9,
+    "ci95": [
+     0.7818646335657977,
+     0.9667249064109775
+    ]
+   },
+   {
+    "n": 50,
+    "mean_predicted": 1.0,
+    "observed": 1.0,
+    "ci95": [
+     0.9288782635358024,
+     1.0
+    ]
+   },
+   {
+    "n": 50,
+    "mean_predicted": 1.0,
+    "observed": 1.0,
+    "ci95": [
+     0.9288782635358024,
+     1.0
+    ]
+   },
+   {
+    "n": 49,
+    "mean_predicted": 1.0,
+    "observed": 1.0,
+    "ci95": [
+     0.9274807363357226,
+     1.0
+    ]
+   },
+   {
+    "n": 49,
+    "mean_predicted": 1.0,
+    "observed": 1.0,
+    "ci95": [
+     0.9274807363357226,
+     1.0
+    ]
+   },
+   {
+    "n": 49,
+    "mean_predicted": 1.0,
+    "observed": 1.0,
+    "ci95": [
+     0.9274807363357226,
+     1.0
+    ]
+   },
+   {
+    "n": 49,
+    "mean_predicted": 1.0,
+    "observed": 1.0,
+    "ci95": [
+     0.9274807363357226,
+     1.0
+    ]
+   }
+  ],
+  "groups": [
+   {
+    "group": "TOEFL_real_91",
+    "role": "human_nonnative",
+    "n": 91,
+    "median_p_ai": 0.0,
+    "long_enough": 0,
+    "likely_ai": 0,
+    "likely_human": 0,
+    "cant_tell": 0,
+    "low_at_or_above_tau_any_length": 0
+   },
+   {
+    "group": "HewlettStudentEssay_real_88",
+    "role": "human_native",
+    "n": 88,
+    "median_p_ai": 0.0,
+    "long_enough": 87,
+    "likely_ai": 0,
+    "likely_human": 87,
+    "cant_tell": 0,
+    "low_at_or_above_tau_any_length": 0
+   },
+   {
+    "group": "CollegeEssay_real_70",
+    "role": "human_native",
+    "n": 70,
+    "median_p_ai": 0.0,
+    "long_enough": 70,
+    "likely_ai": 1,
+    "likely_human": 69,
+    "cant_tell": 0,
+    "low_at_or_above_tau_any_length": 1
+   },
+   {
+    "group": "CS224N_real_145",
+    "role": "human_unknown",
+    "n": 145,
+    "median_p_ai": 0.013157894736842105,
+    "long_enough": 82,
+    "likely_ai": 1,
+    "likely_human": 75,
+    "cant_tell": 6,
+    "low_at_or_above_tau_any_length": 2
+   },
+   {
+    "group": "CollegeEssay_gpt3_31",
+    "role": "ai",
+    "n": 31,
+    "median_p_ai": 1.0,
+    "long_enough": 30,
+    "likely_ai": 30,
+    "likely_human": 0,
+    "cant_tell": 0,
+    "low_at_or_above_tau_any_length": 31
+   },
+   {
+    "group": "CollegeEssay_gpt3PromptEng_31",
+    "role": "ai",
+    "n": 31,
+    "median_p_ai": 1.0,
+    "long_enough": 26,
+    "likely_ai": 26,
+    "likely_human": 0,
+    "cant_tell": 0,
+    "low_at_or_above_tau_any_length": 31
+   },
+   {
+    "group": "CS224N_gpt3_145",
+    "role": "ai",
+    "n": 145,
+    "median_p_ai": 1.0,
+    "long_enough": 0,
+    "likely_ai": 0,
+    "likely_human": 0,
+    "cant_tell": 0,
+    "low_at_or_above_tau_any_length": 141
+   },
+   {
+    "group": "CS224N_gpt3PromptEng_145",
+    "role": "ai",
+    "n": 145,
+    "median_p_ai": 1.0,
+    "long_enough": 1,
+    "likely_ai": 1,
+    "likely_human": 0,
+    "cant_tell": 0,
+    "low_at_or_above_tau_any_length": 133
+   }
+  ],
+  "human_false_positives": {
+   "flagged": 2,
+   "n": 239,
+   "ci95": [
+    0.0010150394410703963,
+    0.029900205479630133
+   ]
+  }
+ },
+ "final_calibrator": {
+  "tau": 0.5,
+  "ai_edited_groups": [
+   {
+    "group": "TOEFL_gpt4polished_91",
+    "role": "ai_edited",
+    "n": 91,
+    "median_p_ai": 1.0,
+    "long_enough": 0,
+    "likely_ai": 0,
+    "likely_human": 0,
+    "cant_tell": 0,
+    "low_at_or_above_tau_any_length": 77
+   },
+   {
+    "group": "HewlettStudentEssay_GPTsimplify_88",
+    "role": "ai_edited",
+    "n": 88,
+    "median_p_ai": 0.6,
+    "long_enough": 14,
+    "likely_ai": 8,
+    "likely_human": 5,
+    "cant_tell": 1,
+    "low_at_or_above_tau_any_length": 41
+   }
+  ]
+ }
+}
