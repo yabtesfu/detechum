@@ -133,6 +133,23 @@ stratum and documents it. It does not quietly accept a higher false positive rat
 Out of distribution guard: inputs under the minimum length, or in a language or domain without
 calibration data, receive no verdict, only the raw signals.
 
+Status of the implementation:
+
+* **Layers 1 and 2** are in `src/detechum/calibration.py`.
+* **Layer 3** is in `src/detechum/conformal.py`. For each class and each length band it counts how many
+  calibration texts are at least as extreme as the new text. "Human" is ruled out when at most 1% of human
+  texts would score that high, and "AI" when at most 5% of AI texts would score that low. A label needs the
+  interval rule of `src/detechum/verdict.py` and a prediction set that holds that class alone, so this layer
+  can withhold a label and can never create one.
+* **A thin band gives no label.** Ruling out a class needs 99 human texts for the 1% rate or 19 AI texts for
+  the 5% rate in that band. With the pilot data no band can label a text as AI
+  ([report](../../results/calibration_pilot_v2/report.md)).
+* **The layer does not detect a text that is unlike the calibration data.** It compares one score with the
+  scores of texts of similar length. A text in another language or genre gets a score like any other. The
+  guard for language and domain is not implemented: the command does not detect either.
+* **Writer group and domain are not conditioned on**, because they are unknown for a new text. Per stratum
+  thresholds for those need a declared or detected stratum.
+
 ## 4. (c) Calibration you can inspect
 
 * Each release publishes reliability diagrams (equal mass bins), ECE and Brier score

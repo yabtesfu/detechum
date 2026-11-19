@@ -7,9 +7,11 @@ behind it, including the sentences that raise the score most (architecture §5).
 import argparse
 import json
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 from detechum.calibration import INTERVAL_LEVEL, Calibrator
+from detechum.conformal import ConformalLayer, ConformalResult, min_calibration_texts
 from detechum.explain import MIN_CONTRIBUTION, sentence_contributions, split_sentences
 from detechum.models import GPTTRACE, ModelVerificationError, verify_model
 from detechum.normalize import normalize
@@ -40,11 +42,40 @@ def _sentence_effects(text: str, scorer, raw_score: float, calibrator: Calibrato
     }
 
 
+def _conformal_reasons(conformal: ConformalResult, interval_verdict: Verdict, verdict: Verdict) -> list[str]:
+    """Say what the comparison with the length band found and, if it withheld a label, why."""
+    c = conformal
+    band = f"{c.min_words} or more words" if c.max_words is None else f"{c.min_words} to {c.max_words - 1} words"
+    reasons = [f"Among calibration texts of {band}, {c.human_at_or_above} of {c.n_human} human texts score this "
+               f"high or higher and {c.ai_at_or_below} of {c.n_ai} AI texts score this low or lower."]
+    if verdict is interval_verdict:
+        return reasons
+    need_human, need_ai = min_calibration_texts(c.alpha_human), min_calibration_texts(c.alpha_ai)
+    if verdict is Verdict.NO_VERDICT:
+        return reasons + [f"A label for a text of this length needs at least {need_human} human or {need_ai} AI "
+                          "calibration texts, so no verdict is given."]
+    if interval_verdict is Verdict.LIKELY_AI and c.human_in_set:
+        target = f"at the {c.alpha_human * 100:g}% error target, so the text is not labelled as AI."
+        blocked = (f"That does not rule out a human writer {target}" if c.can_exclude_human else
+                   f"At least {need_human} human calibration texts of this length are needed before a text may be "
+                   f"labelled as AI {target}")
+    elif interval_verdict is Verdict.LIKELY_HUMAN and c.ai_in_set:
+        target = f"at the {c.alpha_ai * 100:g}% error target, so the text is not labelled as human written."
+        blocked = (f"That does not rule out an AI {target}" if c.can_exclude_ai else
+                   f"At least {need_ai} AI calibration texts of this length are needed before a text may be "
+                   f"labelled as human written {target}")
+    else:
+        blocked = ("The score is higher than nearly all human calibration texts of this length and lower than "
+                   "nearly all AI ones. It resembles neither group, so no label is given.")
+    return reasons + [blocked]
+
+
 def analyse(text: str, scorer, calibration: dict | None, explain: bool = True, model: dict | None = None) -> dict:
     """Score one text and return every value the report shows.
 
     `scorer` needs `name`, `score(list[str])` and `is_truncated(str)`. `calibration` is the content
-    of a calibration file or None, in which case no verdict is given. With `explain`, each sentence
+    of a calibration file or None, in which case no verdict is given. A calibration file with a
+    "conformal" entry also applies the conformal abstention layer. With `explain`, each sentence
     is removed in turn and the rest scored again, which costs one scorer pass per sentence. `model` is
     the record of the pinned model behind `scorer`, passed only by a caller that has verified its
     files; the report then names the model and says the files were verified.
@@ -62,7 +93,7 @@ def analyse(text: str, scorer, calibration: dict | None, explain: bool = True, m
     result = {
         "n_words": n_words, "scorer": scorer.name, "model": model, "raw_score": float(scorer.score([cleaned])[0]),
         "normalization": found.summary(), "evasion_suspected": found.evasion_suspected,
-        "calibration": None, "p_ai": None, "interval": None, "tau": None,
+        "calibration": None, "p_ai": None, "interval": None, "tau": None, "conformal": None,
         "verdict": Verdict.NO_VERDICT.value, "reasons": [], "sentences": None,
     }
     reasons = result["reasons"]
@@ -88,17 +119,29 @@ def analyse(text: str, scorer, calibration: dict | None, explain: bool = True, m
         reasons.append("This calibration has no threshold that meets its false positive target.")
         return result
 
-    verdict = decide_verdict(doc, tau)
-    result["verdict"] = verdict.value
-    low, high = f"{doc.p_low:.2f}", f"{doc.p_high:.2f}"
-    if verdict is Verdict.NO_VERDICT:
+    if n_words < MIN_WORDS_FOR_VERDICT:
         reasons.append(f"The text has {n_words} words. Texts under {MIN_WORDS_FOR_VERDICT} words get no verdict.")
-    elif verdict is Verdict.LIKELY_AI:
-        reasons += [f"The whole interval ({low} to {high}) is at or above the threshold {tau:.2f}.", AI_EDITED_NOTE]
-    elif verdict is Verdict.LIKELY_HUMAN:
+        return result
+    layer = ConformalLayer.from_dict(calibration["conformal"]) if calibration.get("conformal") else None
+    conformal = layer.assess(result["raw_score"], n_words) if layer else None
+    if layer and conformal is None:
+        result["verdict"] = decide_verdict(replace(doc, stratum_calibrated=False), tau).value
+        reasons.append(f"The calibration has no length band for a text of {n_words} words, so no verdict is given.")
+        return result
+
+    interval_verdict, verdict = decide_verdict(doc, tau), decide_verdict(doc, tau, conformal)
+    result.update(verdict=verdict.value, conformal=conformal.to_dict() if conformal else None)
+    low, high = f"{doc.p_low:.2f}", f"{doc.p_high:.2f}"
+    if interval_verdict is Verdict.LIKELY_AI:
+        reasons.append(f"The whole interval ({low} to {high}) is at or above the threshold {tau:.2f}.")
+    elif interval_verdict is Verdict.LIKELY_HUMAN:
         reasons.append(f"The whole interval ({low} to {high}) is below the threshold {tau:.2f}.")
     else:
         reasons.append(f"The interval ({low} to {high}) contains the threshold {tau:.2f}.")
+    if conformal:
+        reasons += _conformal_reasons(conformal, interval_verdict, verdict)
+    if verdict is Verdict.LIKELY_AI:
+        reasons.append(AI_EDITED_NOTE)
     return result
 
 

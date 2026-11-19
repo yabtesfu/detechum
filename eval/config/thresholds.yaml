@@ -1,0 +1,37 @@
+# Thresholds and release gates of the evaluation plan (docs/evaluation/plan.md).
+# Freeze reference: eval_plan_v1. Changing a value after that tag needs a new tag and a written reason.
+# The file is flat, one "key: value" per line, so that tests can read it without a YAML library.
+
+# M1: true positive rate at a fixed false positive rate. A stratum supports a "1% or lower" claim
+# only with at least this many human texts.
+m1_target_fpr: 0.01
+m1_min_human_texts_for_claim: 300
+secondary_target_fprs: [0.001, 0.05]
+
+# M2: calibration. The per stratum limit applies to strata with at least the stated number of texts.
+m2_ece_bins: 15
+m2_ece_max_overall: 0.03
+m2_ece_max_per_stratum: 0.05
+m2_min_texts_per_stratum: 300
+
+# M3: nonnative release gate. Both conditions must hold.
+m3_nonnative_fpr_upper_bound_max: 0.02
+m3_nonnative_to_native_fpr_ratio_max: 1.5
+
+# Level of the Clopper Pearson interval reported with every error rate.
+error_rate_interval_level: 0.95
+
+# Length strata for reporting: lower word limits after the first stratum, which starts at 0.
+length_strata_edges_words: [100, 150, 250, 500]
+
+# Verdict rules.
+min_words_for_verdict: 150
+probability_interval_level: 0.90
+bootstrap_resamples: 1000
+min_tau: 0.5
+conformal_alpha_human: 0.01
+conformal_alpha_ai: 0.05
+conformal_band_edges_words: [150, 250, 500]
+
+# Revision mode: number of degradation tricks tolerated in any output.
+revision_degradation_tricks_max: 0
