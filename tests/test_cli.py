@@ -1,9 +1,12 @@
+import tempfile
 import unittest
+from pathlib import Path
 
 import numpy as np
 
 from detechum.calibration import fit_calibrator
-from detechum.cli import AI_EDITED_NOTE, CAVEAT, SENTENCE_CAVEAT, analyse, render_text
+from detechum.cli import AI_EDITED_NOTE, CAVEAT, SENTENCE_CAVEAT, _load_scorer, analyse, render_text
+from detechum.models import GPTTRACE
 from detechum.verdict import Verdict
 
 
@@ -98,6 +101,29 @@ class RenderTextTest(unittest.TestCase):
     def test_report_without_calibration_says_probability_is_not_available(self):
         text = render_text(analyse(LONG_TEXT, FakeScorer(8.0), None))
         self.assertIn("not available", text)
+
+
+class ModelVerificationTest(unittest.TestCase):
+    def test_verified_model_is_recorded_in_the_result_and_named_in_the_report(self):
+        result = analyse(LONG_TEXT, FakeScorer(8.0), calibration(), model=GPTTRACE.record())
+        self.assertEqual(result["model"]["weights_sha256"], GPTTRACE.weights.sha256)
+        self.assertIn(f"{GPTTRACE.repo} at revision {GPTTRACE.revision[:12]}, files verified by SHA 256",
+                      render_text(result))
+
+    def test_report_makes_no_verification_claim_without_a_model_record(self):
+        result = analyse(LONG_TEXT, FakeScorer(8.0), calibration())
+        self.assertIsNone(result["model"])
+        self.assertNotIn("verified", render_text(result))
+
+    def test_no_scorer_is_loaded_from_a_folder_that_fails_verification(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp) / GPTTRACE.folder
+            folder.mkdir()
+            # Would raise NameError if the loader executed it.
+            (folder / "normalize.py").write_text("executed_before_verification\n")
+            with self.assertRaises(SystemExit) as raised:
+                _load_scorer(Path(tmp), None)
+        self.assertIn("No score was produced", str(raised.exception))
 
 
 class MarkerScorer(FakeScorer):

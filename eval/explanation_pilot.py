@@ -120,7 +120,6 @@ def main():
     groups = load_groups(args.liang)
     model_dir = verify_models(args.models, keys=("qwen_base",))["qwen_base"]
     rows = score_all(groups, model_dir, args.out, args.device)
-    repo, revision, _folder, _weights, weights_sha = MODELS["qwen_base"]
     liang_commit = (args.liang / ".git" / "HEAD").read_text().strip()
     if liang_commit.startswith("ref: "):
         liang_commit = (args.liang / ".git" / liang_commit[5:]).read_text().strip()
@@ -128,7 +127,7 @@ def main():
         "environment": {"python": platform.python_version(), "torch": torch.__version__,
                         "transformers": transformers.__version__, "machine": platform.machine(),
                         "liang_commit": liang_commit, "target_fpr": TARGET_FPR,
-                        "model": {"repo": repo, "revision": revision, "weights_sha256": weights_sha}},
+                        "model": MODELS["qwen_base"].record()},
         "results": summarize(groups, rows),
     }
     (args.out / "metrics.json").write_text(json.dumps(result, indent=1) + "\n")

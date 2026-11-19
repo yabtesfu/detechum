@@ -27,10 +27,10 @@ The core package requires NumPy and SciPy.
 The `models` extra adds PyTorch and Transformers for the scorers in `src/detechum/scorers` and the
 experiments in `eval/`.
 
-`.venv/bin/python eval/fetch_models.py` downloads the pinned model weights (about 10.3 GB) into `data/external/models`,
+`.venv/bin/python eval/fetch_models.py` downloads the pinned model files (about 10.3 GB) into `data/external/models`,
 which is not committed. Weights download as 32 MB ranges over parallel connections, and a stalled
 connection is retried automatically. If the run is interrupted, start it again: completed ranges are kept.
-Each assembled file is checked against the SHA 256 published for its pinned revision.
+Every file is checked against the SHA 256 pinned for its revision in `src/detechum/models.py`.
 
 ## Scoring a text
 
@@ -45,11 +45,21 @@ file name to read standard input, `--json` for the full result and `--no-explain
 analysis, which needs one scorer pass per sentence. Without `--calibration` it prints the raw score and no
 verdict.
 
+Before it loads the model, the command checks every file in the model folder against the size and SHA 256
+pinned in `src/detechum/models.py`: the weights, the tokenizer, the configuration and the model's
+`normalize.py`. A missing, changed or extra file stops the command with the name of the file, and no score
+is printed. Reading the 4.1 GB of weights took about 4 seconds on the development machine (Apple silicon).
+The JSON result records the model repository, revision and weights digest. The check catches a wrong
+revision, a broken download and a replaced file. It does not protect against someone who can also change
+the installed code.
+
 Current limits:
 
 * The only calibration file is a pilot fitted on 746 texts from 2023
   ([report](results/calibration_pilot_v1/report.md)). Its probabilities are not validated for any real use.
 * Texts under 150 words get no verdict.
+* The label "Likely AI written or AI edited" covers both cases. The scorer flags most human essays that an
+  AI polished and cannot separate them from text an AI wrote.
 * GPTTrace reads at most 512 tokens. For longer texts only the beginning is scored, and the output says so.
 * The sentence list shows what moves the score, not which sentences are AI written. In a test with one
   planted AI sentence per essay, the top ranked sentence was the planted one in 27 of 50 essays

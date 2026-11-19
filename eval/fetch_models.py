@@ -2,7 +2,7 @@
 
 Weight files are fetched as fixed size byte ranges over several connections. Each range is stored as
 its own part file, so an interrupted run loses at most the unfinished ranges and a rerun skips every
-completed one. Assembled files are checked against the SHA 256 published for the pinned revision.
+completed one. Every file is checked against the SHA 256 pinned in `detechum.models`.
 
 Usage:
     .venv/bin/python eval/fetch_models.py [--dest data/external/models] [--workers 8]
@@ -10,7 +10,6 @@ Usage:
 
 import argparse
 import concurrent.futures
-import hashlib
 import shutil
 import threading
 import time
@@ -18,38 +17,12 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from detechum.models import MODELS, sha256_of
+
 USER_AGENT = "detechum-fetch/0.1"
 CHUNK = 32 * 1024 * 1024
 READ_TIMEOUT = 30  # seconds without data before a connection is abandoned and retried
 MAX_ATTEMPTS = 200
-
-# Listed in download priority order: the primary scorer first.
-MODELS = [
-    {
-        "repo": "nakas/gpttrace-v8s-1b", "revision": "ac748e32ca8c90bb8858fadc427757728e27b063",
-        "folder": "gpttrace-v8s-1b",
-        "small": ["normalize.py", "model/config.json", "model/tokenizer.json", "model/tokenizer_config.json"],
-        "weights": ("model/model.safetensors", 4125087720,
-                    "379b154cadb0fd6a226badd2f745705f49c19461ef150ee6b97fec92e82ba538"),
-    },
-    {
-        "repo": "Qwen/Qwen2.5-1.5B", "revision": "8faed761d45a263340a0528343f099c05c9a4323",
-        "folder": "qwen2.5-1.5b",
-        "small": ["config.json", "generation_config.json", "merges.txt", "vocab.json", "tokenizer.json",
-                  "tokenizer_config.json"],
-        "weights": ("model.safetensors", 3087467144,
-                    "a961db72e75d52b18e6b0c9d379e51a26973b233385e0e127fdda7d648aec796"),
-    },
-    {
-        "repo": "Qwen/Qwen2.5-1.5B-Instruct", "revision": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
-        "folder": "qwen2.5-1.5b-instruct",
-        "small": ["config.json", "generation_config.json", "merges.txt", "vocab.json", "tokenizer.json",
-                  "tokenizer_config.json"],
-        "weights": ("model.safetensors", 3087467144,
-                    "dd924a11b4c220f385b51ffa522daea7c9f3d850e31b162bb5661df483c6d3ee"),
-    },
-]
-
 
 def hub_url(repo: str, revision: str, path: str) -> str:
     return f"https://huggingface.co/{repo}/resolve/{revision}/{path}"
@@ -62,8 +35,8 @@ def resolve(url: str) -> str:
         return r.url
 
 
-def fetch_small(url: str, out: Path) -> None:
-    if out.exists() and out.with_suffix(out.suffix + ".done").exists():
+def fetch_small(url: str, out: Path, sha: str) -> None:
+    if out.exists() and sha256_of(out) == sha:
         return
     out.parent.mkdir(parents=True, exist_ok=True)
     for attempt in range(1, MAX_ATTEMPTS + 1):
@@ -71,12 +44,15 @@ def fetch_small(url: str, out: Path) -> None:
             req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
             with urllib.request.urlopen(req, timeout=READ_TIMEOUT) as r:
                 out.write_bytes(r.read())
-            out.with_suffix(out.suffix + ".done").touch()
-            return
+            break
         except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
             print(f"  retry {attempt} for {out.name}: {e}", flush=True)
             time.sleep(min(30, 2 * attempt))
-    raise SystemExit(f"could not download {url}")
+    else:
+        raise SystemExit(f"could not download {url}")
+    if sha256_of(out) != sha:
+        out.unlink()
+        raise SystemExit(f"{out} failed SHA 256 verification and was removed; rerun to download again")
 
 
 class Progress:
@@ -116,14 +92,6 @@ def fetch_range(url: str, start: int, end: int, part: Path, progress: Progress) 
         except (urllib.error.URLError, TimeoutError, ConnectionError, OSError):
             time.sleep(min(30, 2 * attempt))
     raise SystemExit(f"gave up on {part.name} after {MAX_ATTEMPTS} attempts")
-
-
-def sha256_of(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as fh:
-        for block in iter(lambda: fh.read(1 << 24), b""):
-            digest.update(block)
-    return digest.hexdigest()
 
 
 def fetch_weights(url: str, out: Path, size: int, sha: str, workers: int) -> None:
@@ -170,13 +138,13 @@ def main():
     ap.add_argument("--dest", type=Path, default=Path("data/external/models"))
     ap.add_argument("--workers", type=int, default=8)
     args = ap.parse_args()
-    for m in MODELS:
-        root = args.dest / m["folder"]
-        print(f"{m['repo']}@{m['revision'][:7]}", flush=True)
-        for f in m["small"]:
-            fetch_small(hub_url(m["repo"], m["revision"], f), root / f)
-        path, size, sha = m["weights"]
-        fetch_weights(hub_url(m["repo"], m["revision"], path), root / path, size, sha, args.workers)
+    for m in MODELS.values():
+        root = args.dest / m.folder
+        print(f"{m.repo}@{m.revision[:7]}", flush=True)
+        for f in m.other_files:
+            fetch_small(hub_url(m.repo, m.revision, f.path), root / f.path, f.sha256)
+        w = m.weights
+        fetch_weights(hub_url(m.repo, m.revision, w.path), root / w.path, w.size, w.sha256, args.workers)
     print("all model files downloaded and verified", flush=True)
 
 

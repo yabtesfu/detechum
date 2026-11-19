@@ -10,7 +10,9 @@ from enum import Enum
 
 
 class Verdict(Enum):
-    LIKELY_AI = "Likely AI generated"
+    # Covers human text that an AI edited: the pilot scorer flags most of it and cannot separate it
+    # from text an AI wrote (architecture §8).
+    LIKELY_AI = "Likely AI written or AI edited"
     LIKELY_HUMAN = "Likely human written"
     CANT_TELL = "Can't tell reliably"
     NO_VERDICT = "No verdict (outside calibrated conditions)"
@@ -25,7 +27,8 @@ class ScoredDocument:
     stratum_calibrated: bool   # calibration data exists for this language, domain and writer group
 
 
-MIN_WORDS_FOR_VERDICT = 150  # provisional; set from length stratified curves (plan.md §1)
+# Fixed by the project owner on 2026-11-19 (architecture §8), not derived from measured error rates.
+MIN_WORDS_FOR_VERDICT = 150
 
 
 def decide_verdict(doc: ScoredDocument, tau: float) -> Verdict:
