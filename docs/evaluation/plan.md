@@ -308,3 +308,16 @@ Limits:
   sentences would not be listed.
 * An earlier run stopped after 11 essays because a planted sentence merged with its neighbour during
   sentence splitting. It wrote no results. The script now uses only plantings that split cleanly.
+
+### Decisions recorded on 19 Nov 2026
+
+Both were made by the project owner after the pilots above and before tagging. Details are in the
+[architecture](../design/architecture.md#8-open-decisions).
+
+* **The minimum length for a verdict is fixed at 150 words.** The length stratified results no longer choose
+  it. The length bands of §1 place 150 inside the band of 100 to 249 words, so that band needs a split at 150
+  before tagging. The nonnative texts added before tagging must include texts of 150 words or more, because
+  none of the 91 TOEFL essays reaches that length.
+* **The positive label is "Likely AI written or AI edited".** AI edited human text is still not a class of
+  its own in this plan. The edited groups stay out of the human and AI error rates and are reported
+  separately.

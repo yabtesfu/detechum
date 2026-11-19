@@ -116,7 +116,7 @@ def main():
     human_first = [r for r in rows if r["plant_index"] != 1]
     metrics = {
         "seed": SEED, "scorer": scorer.name, "min_contribution": MIN_CONTRIBUTION,
-        "model": dict(zip(("repo", "revision"), MODELS["gpttrace"][:2])),
+        "model": {"repo": MODELS["gpttrace"].repo, "revision": MODELS["gpttrace"].revision},
         "planted": {
             "ranked_first": rate(sum(r["plant_rank"] == 1 for r in rows), n),
             "ranked_in_top_3": rate(sum(r["plant_rank"] <= 3 for r in rows), n),

@@ -5,7 +5,7 @@ The score is the logit margin `logit[machine] - logit[human]`; the card states t
 9.3 flags about 1% of the vendor's pooled human texts. That claim is the vendor's, not ours.
 """
 
-import importlib.util
+import types
 from pathlib import Path
 
 import torch
@@ -16,10 +16,12 @@ MAX_TOKENS = 512  # the card's usage example truncates here
 
 def _load_normalizer(snapshot_dir: Path):
     # normalize.py ships with the model and must match the preprocessing used in training, so it is
-    # loaded from the pinned snapshot rather than copied into this repository.
-    spec = importlib.util.spec_from_file_location("gpttrace_normalize", snapshot_dir / "normalize.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    # loaded from the pinned snapshot rather than copied into this repository. It is compiled from
+    # source on every load: the import system would run a cached .pyc beside the file in place of the
+    # source that detechum.models verifies.
+    path = snapshot_dir / "normalize.py"
+    module = types.ModuleType("gpttrace_normalize")
+    exec(compile(path.read_bytes(), str(path), "exec"), module.__dict__)
     return module.normalize_text
 
 

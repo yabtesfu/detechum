@@ -22,20 +22,10 @@ import torch
 import transformers
 from scipy.stats import mannwhitneyu
 
+from detechum.models import MODELS, ModelVerificationError, verify_model
 from detechum.scorers.binoculars import BinocularsScorer
 from detechum.scorers.gpttrace import GPTTraceScorer
 from detechum.stats import flag_stats, threshold_for_fpr
-
-# key: (hub repo, pinned revision, local folder written by eval/fetch_models.py, weights file, published SHA 256)
-MODELS = {
-    "gpttrace": ("nakas/gpttrace-v8s-1b", "ac748e32ca8c90bb8858fadc427757728e27b063", "gpttrace-v8s-1b",
-                 "model/model.safetensors", "379b154cadb0fd6a226badd2f745705f49c19461ef150ee6b97fec92e82ba538"),
-    "qwen_base": ("Qwen/Qwen2.5-1.5B", "8faed761d45a263340a0528343f099c05c9a4323", "qwen2.5-1.5b",
-                  "model.safetensors", "a961db72e75d52b18e6b0c9d379e51a26973b233385e0e127fdda7d648aec796"),
-    "qwen_instruct": ("Qwen/Qwen2.5-1.5B-Instruct", "989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
-                      "qwen2.5-1.5b-instruct", "model.safetensors",
-                      "dd924a11b4c220f385b51ffa522daea7c9f3d850e31b162bb5661df483c6d3ee"),
-}
 
 # (folder, role). "ai_edited" groups are human essays rewritten by GPT 4; they are neither human nor
 # AI for FPR or TPR purposes and are reported on their own.
@@ -78,18 +68,11 @@ def sha256(text: str) -> str:
 
 
 def verify_models(models_root: Path, keys: tuple[str, ...] = tuple(MODELS)) -> dict[str, Path]:
-    """Return the local folder of each model in `keys` after checking its weights against the published SHA 256."""
-    paths = {}
-    for key in keys:
-        repo, _rev, folder, weights, expected = MODELS[key]
-        digest = hashlib.sha256()
-        with (models_root / folder / weights).open("rb") as fh:
-            for chunk in iter(lambda: fh.read(1 << 24), b""):
-                digest.update(chunk)
-        if digest.hexdigest() != expected:
-            raise SystemExit(f"{repo}: {weights} does not match the published SHA 256; rerun eval/fetch_models.py")
-        paths[key] = models_root / folder
-    return paths
+    """Return the local folder of each model in `keys` after checking its files against the pinned digests."""
+    try:
+        return {key: verify_model(MODELS[key], models_root) for key in keys}
+    except ModelVerificationError as exc:
+        raise SystemExit(f"{exc}; rerun eval/fetch_models.py")
 
 
 def build_scorers(paths: dict[str, Path], device: str):
@@ -164,7 +147,7 @@ def environment(liang_root: Path) -> dict:
     return {"python": platform.python_version(), "torch": torch.__version__,
             "transformers": transformers.__version__, "machine": platform.machine(),
             "liang_commit": liang_commit,
-            "models": {k: {"repo": m[0], "revision": m[1], "weights_sha256": m[4]} for k, m in MODELS.items()},
+            "models": {k: m.record() for k, m in MODELS.items()},
             "seed": SEED, "target_fpr": TARGET_FPR}
 
 

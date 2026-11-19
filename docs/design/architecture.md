@@ -10,7 +10,7 @@ every metric referred to here is defined in [`../evaluation/plan.md`](../evaluat
 Document: 412 words · English · domain: student essay (detected automatically, editable)
 
 P(AI generated) ............ 0.71   (90% interval 0.58 to 0.82)
-Verdict .................... Likely AI generated  [threshold set for ≤1% false positives]
+Verdict .................... Likely AI written or AI edited  [threshold set for ≤1% false positives]
 Sentences flagged .......... 9 of 23  (39%)        [each sentence scored on its own]
 Reliability of this result . Medium: 412 words; domain seen in calibration; English
 
@@ -216,19 +216,35 @@ Hard rules (enforced in code and tests):
   hash, threshold, stratum, and a JSON export of all signals, so the number can be recomputed offline.
 * The `detechum score` command, with its explain and JSON options, produces the same output as the UI; the UI is a view over that JSON.
 
+Status of the implementation:
+
+* **Model files are verified before every score.** `detechum.models` pins the size and SHA 256 of every file
+  of each model revision, including the `normalize.py` that the GPTTrace scorer executes. `detechum score`
+  stops without a score if a file is missing, changed or not part of the pinned revision. The result records
+  the model repository, the revision and the weights digest. The digests of the weights are the ones the hub
+  publishes. The hub publishes no SHA 256 for the smaller files, so theirs were computed from copies whose
+  git blob ids matched the hub's listing.
+* **Not in the result yet:** the Detechum version and a hash of the calibration set manifest. A calibration
+  file is tied to a scorer by name, not to a model revision.
+
 ## 8. Open decisions
 
-* Minimum length for a verdict (candidates: 100 or 150 words), decide from the length stratified curves in
-  the evaluation plan, not in advance. The code uses 150 for now. At that value none of the 91 TOEFL
-  essays of the pilot data is long enough for a verdict (evaluation plan §8).
 * Which open scorer models to host (memory and latency budget vs. accuracy). Decide after reproducing Phase 1
   numbers locally.
 * How to name the abstain state in the UI.
-* How to report human writing that an AI edited. In the pilot, GPTTrace at its model card threshold flags
-  75/91 (82.4%) of TOEFL essays polished by GPT 4 and 40/88 (45.5%) of native essays simplified by GPT. A two
-  way verdict has no accurate answer for these texts. Candidates: a separate "AI edited" label, a softer
-  verdict for this case, or a note in the explanation.
 * What reference the token rank and entropy templates compare against. In the pilot, 83 of 91 TOEFL essays
   have a top 1 token rate above the median of native essays of the same length (evaluation plan §8), so a
   single "human median" misleads nonnative writers. These templates stay out of the report until a
   reference by writer group and length passes the nonnative test.
+
+Decided by the project owner on 19 Nov 2026:
+
+* **The minimum length for a verdict is 150 words.** This was chosen directly and not read from the length
+  stratified results of the evaluation plan. Known cost: none of the 91 TOEFL essays of the pilot data is
+  long enough for a verdict (evaluation plan §8).
+* **Human writing that an AI edited shares a label with AI writing.** The label reads "Likely AI written or
+  AI edited", and the report says that a person may have written the text and an AI edited it, and that
+  the tool cannot tell the two cases apart. The reason is the pilot: GPTTrace at its model card threshold
+  flags 75/91 (82.4%) of TOEFL essays polished by GPT 4 and 40/88 (45.5%) of native essays simplified by GPT,
+  so a label that says "AI generated" would be wrong for many flagged texts. A separate "AI edited" label
+  needs a signal that separates the two cases, and none has been tested.

@@ -11,13 +11,14 @@ from pathlib import Path
 
 from detechum.calibration import INTERVAL_LEVEL, Calibrator
 from detechum.explain import MIN_CONTRIBUTION, sentence_contributions, split_sentences
+from detechum.models import GPTTRACE, ModelVerificationError, verify_model
 from detechum.normalize import normalize
 from detechum.verdict import MIN_WORDS_FOR_VERDICT, Verdict, decide_verdict
 
-GPTTRACE_FOLDER = "gpttrace-v8s-1b"
 CAVEAT = ("These are statistical signals, not proof of authorship. Human writers, especially those writing "
           "in a second language, can trigger them.")
-AI_EDITED_NOTE = "This label does not separate AI written text from human text that an AI edited."
+AI_EDITED_NOTE = ("The text shows signs that an AI had a hand in it. A person may have written it and an AI edited "
+                  "it, or an AI may have written all of it. This tool cannot tell those two cases apart.")
 MAX_SENTENCES_SHOWN = 5
 # Wording follows results/attribution_pilot_v1: the top ranked sentence was the planted AI sentence in
 # 27 of 50 essays, and opening sentences ranked first more often than chance.
@@ -39,12 +40,14 @@ def _sentence_effects(text: str, scorer, raw_score: float, calibrator: Calibrato
     }
 
 
-def analyse(text: str, scorer, calibration: dict | None, explain: bool = True) -> dict:
+def analyse(text: str, scorer, calibration: dict | None, explain: bool = True, model: dict | None = None) -> dict:
     """Score one text and return every value the report shows.
 
     `scorer` needs `name`, `score(list[str])` and `is_truncated(str)`. `calibration` is the content
     of a calibration file or None, in which case no verdict is given. With `explain`, each sentence
-    is removed in turn and the rest scored again, which costs one scorer pass per sentence.
+    is removed in turn and the rest scored again, which costs one scorer pass per sentence. `model` is
+    the record of the pinned model behind `scorer`, passed only by a caller that has verified its
+    files; the report then names the model and says the files were verified.
 
     Raises ValueError if the text has no words or the calibration was fitted for another scorer.
     """
@@ -57,7 +60,7 @@ def analyse(text: str, scorer, calibration: dict | None, explain: bool = True) -
                          f"not for {scorer.name!r}")
 
     result = {
-        "n_words": n_words, "scorer": scorer.name, "raw_score": float(scorer.score([cleaned])[0]),
+        "n_words": n_words, "scorer": scorer.name, "model": model, "raw_score": float(scorer.score([cleaned])[0]),
         "normalization": found.summary(), "evasion_suspected": found.evasion_suspected,
         "calibration": None, "p_ai": None, "interval": None, "tau": None,
         "verdict": Verdict.NO_VERDICT.value, "reasons": [], "sentences": None,
@@ -112,6 +115,9 @@ def render_text(result: dict) -> str:
                                             f"({round(INTERVAL_LEVEL * 100)}% interval {low:.2f} to {high:.2f})"))
     lines.append(row("Verdict", result["verdict"]))
     lines.append(row("Raw score", f"{result['raw_score']:.3f}   ({result['scorer']})"))
+    if result["model"]:
+        model = result["model"]
+        lines.append(row("Model", f"{model['repo']} at revision {model['revision'][:12]}, files verified by SHA 256"))
     if result["calibration"]:
         cal = result["calibration"]
         lines.append(row("Calibration", f"{cal['name']}, fitted on {cal['n_human']} human and {cal['n_ai']} AI texts"))
@@ -144,16 +150,23 @@ def _render_sentences(sentences: dict | None) -> list[str]:
 
 
 def _load_scorer(models: Path, device: str | None):
+    """Return the GPTTrace scorer and the record of its model, after verifying the model files.
+
+    The files are verified before anything from the folder is loaded, because loading the scorer
+    executes the folder's `normalize.py`.
+    """
+    try:
+        snapshot = verify_model(GPTTRACE, models)
+    except ModelVerificationError as exc:
+        raise SystemExit(f"{exc}\nNo score was produced. Run eval/fetch_models.py to restore the pinned files, "
+                         "or pass --models with the folder that holds them.")
     try:
         import torch
         from detechum.scorers.gpttrace import GPTTraceScorer
     except ImportError as exc:
         raise SystemExit(f"scoring needs the model dependencies: pip install 'detechum[models]' ({exc})")
-    snapshot = models / GPTTRACE_FOLDER
-    if not snapshot.is_dir():
-        raise SystemExit(f"model folder {snapshot} not found; run eval/fetch_models.py or pass --models")
     device = device or ("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
-    return GPTTraceScorer(snapshot, device, typography=False)
+    return GPTTraceScorer(snapshot, device, typography=False), GPTTRACE.record()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -170,8 +183,9 @@ def main(argv: list[str] | None = None) -> int:
 
     text = sys.stdin.read() if args.file == "-" else Path(args.file).read_text(encoding="utf-8")
     calibration = json.loads(args.calibration.read_text()) if args.calibration else None
+    scorer, model = _load_scorer(args.models, args.device)
     try:
-        result = analyse(text, _load_scorer(args.models, args.device), calibration, explain=not args.no_explain)
+        result = analyse(text, scorer, calibration, explain=not args.no_explain, model=model)
     except ValueError as exc:
         raise SystemExit(str(exc))
     print(json.dumps(result, indent=1) if args.json else render_text(result))
