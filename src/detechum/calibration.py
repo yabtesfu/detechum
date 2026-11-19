@@ -4,8 +4,8 @@ The map is an isotonic regression of the label on the score, so P(AI) reads as "
 texts among calibration texts scored like this one". That share depends on the mix of human and
 AI texts in the calibration set, which is why a `Calibrator` records both counts.
 
-The conformal abstention layer of §3 is not implemented here. Abstention currently comes from the
-interval rule in `detechum.verdict`.
+The conformal abstention layer of §3 is in `detechum.conformal`. Both layers feed
+`detechum.verdict.decide_verdict`.
 """
 
 import math

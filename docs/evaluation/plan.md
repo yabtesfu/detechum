@@ -1,8 +1,13 @@
 # Phase 4: Evaluation plan (preregistered)
 
-**Status: preregistration draft.** Once approved, this file and `eval/config/thresholds.yaml` are committed and
-tagged `eval_plan_v1` **before any run on the test split**. Changing a metric or a pass criterion after that
-requires a new tag and a written reason. The point is to rule out picking metrics after seeing results.
+**Freeze reference: `eval_plan_v1`.** The commit that carries the tag `eval_plan_v1` holds the binding text of
+this file and of `eval/config/thresholds.yaml`. **No run on the test split may be made before that tag exists.**
+Changing a metric or a pass criterion after it requires a new tag and a written reason. The point is to rule
+out picking metrics after seeing results.
+
+The tag fixes the metrics, their thresholds and the verdict rules. It does not fix the corpora: §1 lists
+candidates whose licenses are not confirmed. No split manifest exists yet, so no test split exists and no
+run on one has been made. Of the harness in §4, only the thresholds file exists.
 
 Sources for design choices: [`../research/phase1_methods.md`](../research/phase1_methods.md).
 
@@ -28,7 +33,8 @@ Rules:
 ### Strata (each one evaluated on its own)
 
 * **Writer group:** native, nonnative (by L1 family where known), unknown.
-* **Length:** < 100, 100 to 249, 250 to 499, ≥ 500 words.
+* **Length:** < 100, 100 to 149, 150 to 249, 250 to 499, ≥ 500 words. Texts under 150 words get no verdict, so
+  the first two bands report scorer metrics only.
 * **Domain:** student essay, news, academic abstract, creative, web/forum, plus theology/humanities (flagged by [Karr et al. 2026](https://arxiv.org/abs/2608.11256) as high FPR).
 * **Generator:** each model family, plus "unseen generator" (families held out of train and calib).
 
@@ -87,6 +93,31 @@ Report the **drop** from baseline per attack, as absolute points with an interva
 AUROC; TPR at 0.1% and 5% FPR; abstention rate per stratum (the share of inputs that get "Can't tell
 reliably"); latency per 1,000 words on a stated GPU.
 
+### Verdict rules and rates
+
+M1 to M4 measure a threshold on the score. The verdict a user sees is stricter, and its rules are fixed here
+and in `eval/config/thresholds.yaml`:
+
+* A text under 150 words gets no verdict.
+* A label needs the whole 90% interval of P(AI) on one side of τ, and τ is never below 0.5.
+* A label also needs the conformal prediction set to hold that class alone. The set is built on the calib
+  split, for each class and each length band (150 to 249, 250 to 499, 500 or more words). "Human" may be
+  ruled out for at most 1% of human texts and "AI" for at most 5% of AI texts. The 5% is our choice and is
+  not taken from the literature.
+* A class can be ruled out only in a band with enough calib texts of that class: 99 human texts for the 1%
+  rate, 19 AI texts for the 5% rate. A band with fewer cannot give the matching label.
+
+Reported on test, for each length band and overall, each with a 95% Clopper Pearson interval:
+
+* the share of human texts labelled "Likely AI written or AI edited" (the false accusation rate);
+* the share of AI texts labelled "Likely human written";
+* the share of each class that gets "Can't tell reliably" or no verdict;
+* the share of texts of each class whose own class was ruled out, next to its target rate.
+
+These rates have no pass criterion of their own. M1 and M3 remain the gates. The sample size rule of M1
+applies: a band with fewer than 300 human test texts does not support a "≤ 1%" claim for its false
+accusation rate.
+
 ## 3. Revision mode metrics
 
 Run on the AI subset of test, and on the probe set.
@@ -122,6 +153,9 @@ Makefile                   # `make reproduce RELEASE=x.y.z`
 * Determinism: fixed seeds, pinned model revisions, pinned library versions. The same inputs must give byte identical `metrics.json`.
 * Texts we cannot redistribute (licensed corpora) are referenced by manifest hash. A user with access gets the same hashes, and therefore the same results.
 * CI: a smoke subset runs on every PR. The full test run happens only on release tags, and the run log (who, when, which commit) is committed.
+* State at the tag: `eval/config/thresholds.yaml` exists. `scorers.yaml`, the manifests, `run.py`, `report.py`,
+  the Dockerfile and the Makefile do not. Model revisions and file digests are pinned in
+  `src/detechum/models.py`.
 
 ## 5. RAID submission
 
@@ -169,8 +203,10 @@ named detector's result.
 
 ## 8. Pilot runs recorded before tagging
 
-This plan is not tagged yet. Runs made before the tag are listed here so that they cannot shape the metrics
-unnoticed. No metric or pass criterion in §2 was changed after these results were seen.
+Runs made before the tag are listed here so that they cannot shape the metrics unnoticed. None of them used a
+test split. No pass criterion in §2 was changed after these results were seen. Two parts of the plan were
+added after the pilots and before the tag: the split of the length bands at 150 words (§1) and the verdict
+rules and rates (§2).
 
 ### bias_v1 (GPTTrace scored 14 Nov 2026, Binoculars style ratio scored 18 Nov 2026)
 
@@ -256,6 +292,7 @@ What the pilot means for this plan:
 
 1. **The provisional 150 word minimum removes the whole nonnative group of this corpus from the verdict.**
    The length stratified curves that decide the minimum (§1) need nonnative texts above and below it.
+   (The minimum was fixed on 19 Nov 2026, see the decisions below.)
 2. **The calibration file in the results folder is for testing the pipeline only.** No release may use it.
 
 ### explanation_pilot_v1 (18 Nov 2026)
@@ -315,9 +352,55 @@ Both were made by the project owner after the pilots above and before tagging. D
 [architecture](../design/architecture.md#8-open-decisions).
 
 * **The minimum length for a verdict is fixed at 150 words.** The length stratified results no longer choose
-  it. The length bands of §1 place 150 inside the band of 100 to 249 words, so that band needs a split at 150
-  before tagging. The nonnative texts added before tagging must include texts of 150 words or more, because
-  none of the 91 TOEFL essays reaches that length.
+  it. §1 now splits the band of 100 to 249 words at 150. The nonnative texts collected for the evaluation
+  must include texts of 150 words or more, because none of the 91 TOEFL essays reaches that length.
 * **The positive label is "Likely AI written or AI edited".** AI edited human text is still not a class of
   its own in this plan. The edited groups stay out of the human and AI error rates and are reported
   separately.
+
+### calibration_pilot_v2 (19 Nov 2026)
+
+* **Question:** does the conformal abstention layer keep its error rates on held out texts, and which labels
+  remain?
+* **Data, folds and calibration map:** those of calibration_pilot_v1. The ECE, the Brier score, tau and the
+  fitted map are identical to version 1.
+* **Method:** each fold fits the layer on its training part. "Human" may be ruled out for 1% of human texts
+  and "AI" for 5% of AI texts. Two layers were run: one with the length bands of §1 and one with a single
+  band for all texts of 150 words or more.
+* **Reading fixed before the run:** a layer fails if, for either class, the 95% interval of the held out share
+  of texts whose own class was ruled out lies entirely above the target rate of that class.
+* **Harness:** `eval/calibration_pilot.py`. Outputs:
+  [`results/calibration_pilot_v2/`](../../results/calibration_pilot_v2/report.md).
+
+Held out results for texts of 150 words or more (239 human, 57 AI):
+
+| Measure | Interval rule alone | Banded layer | Single band layer |
+|---|---|---|---|
+| Human texts labelled "Likely AI" | 2/239 | 0/239 (0.0 to 1.5) | 0/239 (0.0 to 1.5) |
+| Human texts with "human" ruled out | | 0/239 (0.0 to 1.5) | 1/239 (0.0 to 2.3) |
+| AI texts with "AI" ruled out | | 1/57 (0.0 to 9.4) | 3/57 (1.1 to 14.6) |
+| AI texts labelled "Likely AI" | 57/57 | 0/57 | 54/57 |
+| Human texts labelled "Likely human" | 231/239 | 131/239 | 231/239 |
+| Texts with no verdict because their band is too thin | 0 | 119 | 0 |
+
+Outcome under the fixed reading: neither layer fails.
+
+Limits:
+
+* **The banded layer never labels a text as AI on this corpus.** No band holds the 99 human texts that the 1%
+  rate needs. The final bands hold 68, 98 and 73 human texts and 23, 34 and 0 AI texts. Its 0/239 is therefore
+  no evidence that the layer is accurate, only that it stays silent.
+* The single band layer removes both false "Likely AI" labels of the interval rule and keeps 54 of 57 AI
+  texts. Its guarantee is an average over all lengths from 150 words up, so it can be exceeded at one length
+  and undershot at another. The bands exist to prevent that.
+* 57 AI texts are too few to test a 5% rate: the interval of the single band layer runs from 1.1% to 14.6%.
+* Every limit of bias_v1 and calibration_pilot_v1 applies.
+* The file `calibration_single_band.json` was added to the outputs after the results were seen, so that both
+  layers can be tried from the command line. The reading and the layer written to `calibration.json` were
+  not changed.
+
+What the pilot means for this plan:
+
+1. **Each length band of the calib split needs at least 99 human texts before any text of that length can be
+   labelled as AI**, and 19 AI texts before one can be labelled as human written. The M1 rule of 300 human
+   texts per stratum on test is stricter and applies in addition.

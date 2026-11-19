@@ -35,11 +35,13 @@ Every file is checked against the SHA 256 pinned for its revision in `src/detech
 ## Scoring a text
 
 ```bash
-.venv/bin/detechum score essay.txt --calibration results/calibration_pilot_v1/calibration.json
+.venv/bin/detechum score essay.txt --calibration results/calibration_pilot_v2/calibration.json
 ```
 
 The command removes invisible characters and lookalike letters, scores the text with GPTTrace v8s 1B, maps the
-score to P(AI) with a 90% interval and prints a verdict with its reasons. It then removes each sentence in
+score to P(AI) with a 90% interval and prints a verdict with its reasons. A label is given only when the
+whole interval lies on one side of the threshold and the calibration texts of similar length rule out the
+other class. Otherwise the verdict is "Can't tell reliably". It then removes each sentence in
 turn, scores the rest again, and lists the sentences whose removal lowers the score most. Use `-` as the
 file name to read standard input, `--json` for the full result and `--no-explain` to skip the sentence
 analysis, which needs one scorer pass per sentence. Without `--calibration` it prints the raw score and no
@@ -55,8 +57,14 @@ the installed code.
 
 Current limits:
 
-* The only calibration file is a pilot fitted on 746 texts from 2023
-  ([report](results/calibration_pilot_v1/report.md)). Its probabilities are not validated for any real use.
+* The only calibration is a pilot fitted on 746 texts from 2023
+  ([report](results/calibration_pilot_v2/report.md)). Its probabilities are not validated for any real use.
+* With `calibration.json` of the pilot, no text is labelled as AI. Labelling a text as AI at the 1% error
+  target needs 99 human calibration texts of similar length, and the pilot has at most 98 in a length band.
+  `calibration_single_band.json` in the same folder pools all lengths from 150 words up and does give the
+  label, with an error rate that holds on average over those lengths and not at each length.
+* The command does not detect the language or the kind of text. A text unlike the calibration texts is
+  scored like any other.
 * Texts under 150 words get no verdict.
 * The label "Likely AI written or AI edited" covers both cases. The scorer flags most human essays that an
   AI polished and cannot separate them from text an AI wrote.
@@ -67,5 +75,9 @@ Current limits:
 * Reasons based on word predictability are not shown. That signal runs higher for nonnative writers
   ([report](results/explanation_pilot_v1/report.md)).
 
-`.venv/bin/python eval/calibration_pilot.py` rebuilds the pilot calibration and its report from the committed
-scores. It needs no model weights.
+`.venv/bin/python eval/calibration_pilot.py` rebuilds the pilot calibration files and their report from the
+committed scores. It needs no model weights.
+
+The `eval_plan_v1` tag is the freeze reference for the metrics, thresholds and verdict rules in
+[docs/evaluation/plan.md](docs/evaluation/plan.md) and `eval/config/thresholds.yaml`. No run on the test split
+may precede that tag.

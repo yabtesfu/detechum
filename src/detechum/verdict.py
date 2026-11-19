@@ -8,6 +8,8 @@ this function never chooses thresholds, it only applies them.
 from dataclasses import dataclass
 from enum import Enum
 
+from detechum.conformal import ConformalResult
+
 
 class Verdict(Enum):
     # Covers human text that an AI edited: the pilot scorer flags most of it and cannot separate it
@@ -31,12 +33,15 @@ class ScoredDocument:
 MIN_WORDS_FOR_VERDICT = 150
 
 
-def decide_verdict(doc: ScoredDocument, tau: float) -> Verdict:
+def decide_verdict(doc: ScoredDocument, tau: float, conformal: ConformalResult | None = None) -> Verdict:
     """Return the verdict for one document, given the stratum's decision threshold `tau`.
 
     A label is returned only when the whole interval [p_low, p_high] lies on one side of
     `tau`; an interval that straddles `tau` yields CANT_TELL. The point estimate never
     decides a label on its own, so a borderline score cannot produce an accusation.
+
+    With `conformal`, a label also needs the conformal prediction set to hold that class alone.
+    The conformal layer can turn a label into CANT_TELL or NO_VERDICT and can never create one.
 
     Raises ValueError if the interval is inconsistent or `tau` is outside (0, 1).
     """
@@ -48,8 +53,14 @@ def decide_verdict(doc: ScoredDocument, tau: float) -> Verdict:
     # Outside calibrated conditions we have no measured error rate, so no label at all.
     if doc.n_words < MIN_WORDS_FOR_VERDICT or not doc.stratum_calibrated:
         return Verdict.NO_VERDICT
+    # A length band whose calibration texts are too few to rule out either class cannot give a label
+    # for any score, which is a property of the band and not of this text.
+    if conformal is not None and not (conformal.can_exclude_human or conformal.can_exclude_ai):
+        return Verdict.NO_VERDICT
     if doc.p_low >= tau:
-        return Verdict.LIKELY_AI
+        only_ai = conformal is None or (conformal.ai_in_set and not conformal.human_in_set)
+        return Verdict.LIKELY_AI if only_ai else Verdict.CANT_TELL
     if doc.p_high < tau:
-        return Verdict.LIKELY_HUMAN
+        only_human = conformal is None or (conformal.human_in_set and not conformal.ai_in_set)
+        return Verdict.LIKELY_HUMAN if only_human else Verdict.CANT_TELL
     return Verdict.CANT_TELL

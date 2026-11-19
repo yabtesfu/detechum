@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 
 from detechum.calibration import fit_calibrator
+from detechum.conformal import fit_conformal
 from detechum.cli import AI_EDITED_NOTE, CAVEAT, SENTENCE_CAVEAT, _load_scorer, analyse, render_text
 from detechum.models import GPTTRACE
 from detechum.verdict import Verdict
@@ -24,13 +25,20 @@ class FakeScorer:
         return self._truncated
 
 
-def calibration(tau=0.5, scorer="fake_scorer"):
+def calibration(tau=0.5, scorer="fake_scorer", conformal=None):
+    """`conformal` is (human texts, AI texts, first band edge) for the conformal layer, or None for no layer."""
     rng = np.random.default_rng(0)
     scores = np.concatenate([rng.normal(-1, 1, 200), rng.normal(1, 1, 200)])
     labels = np.concatenate([np.zeros(200, int), np.ones(200, int)])
     cal = fit_calibrator(scores, labels, seed=0, n_bootstrap=100)
-    return {"name": "test_calibration", "scorer": scorer, "tau": tau, "description": "synthetic",
-            "calibrator": cal.to_dict()}
+    out = {"name": "test_calibration", "scorer": scorer, "tau": tau, "description": "synthetic",
+           "calibrator": cal.to_dict()}
+    if conformal:
+        n_human, n_ai, edge = conformal
+        keep = np.concatenate([np.arange(n_human), 200 + np.arange(n_ai)])
+        out["conformal"] = fit_conformal(scores[keep], labels[keep], np.full(len(keep), 200), edges=(edge,),
+                                         alpha_human=0.01, alpha_ai=0.05).to_dict()
+    return out
 
 
 LONG_TEXT = "word " * 200
@@ -88,6 +96,60 @@ class AnalyseTest(unittest.TestCase):
     def test_truncation_is_reported(self):
         result = analyse(LONG_TEXT, FakeScorer(8.0, truncated=True), calibration())
         self.assertIn("only its beginning was scored", result["reasons"][0])
+
+
+class ConformalLayerTest(unittest.TestCase):
+    def test_label_is_kept_when_the_band_rules_out_the_other_class(self):
+        result = analyse(LONG_TEXT, FakeScorer(8.0), calibration(conformal=(200, 200, 150)))
+        self.assertEqual(result["verdict"], Verdict.LIKELY_AI.value)
+        self.assertIn("Among calibration texts of 150 or more words, 0 of 200 human texts score this high or "
+                      "higher and 200 of 200 AI texts score this low or lower.", result["reasons"])
+        self.assertEqual(result["reasons"][-1], AI_EDITED_NOTE)
+        self.assertFalse(result["conformal"]["human_in_set"])
+
+        result = analyse(LONG_TEXT, FakeScorer(-8.0), calibration(conformal=(200, 200, 150)))
+        self.assertEqual(result["verdict"], Verdict.LIKELY_HUMAN.value)
+
+    def test_too_few_human_texts_in_the_band_withhold_the_ai_label(self):
+        result = analyse(LONG_TEXT, FakeScorer(8.0), calibration(conformal=(98, 200, 150)))
+        self.assertEqual(result["verdict"], Verdict.CANT_TELL.value)
+        self.assertIn("At least 99 human calibration texts of this length are needed", result["reasons"][-1])
+        self.assertNotIn(AI_EDITED_NOTE, result["reasons"])
+
+    def test_human_texts_scoring_as_high_withhold_the_ai_label(self):
+        cal = calibration()
+        cal["conformal"] = {"edges": [150], "alpha_human": 0.01, "alpha_ai": 0.05,
+                            "human_scores": [[0.0] * 99 + [20.0] * 5], "ai_scores": [[1.0] * 50]}
+        result = analyse(LONG_TEXT, FakeScorer(8.0), cal)
+        self.assertEqual(result["verdict"], Verdict.CANT_TELL.value)
+        self.assertIn("5 of 104 human texts score this high or higher", result["reasons"][-2])
+        self.assertIn("does not rule out a human writer at the 1% error target", result["reasons"][-1])
+
+    def test_too_few_ai_texts_in_the_band_withhold_the_human_label(self):
+        result = analyse(LONG_TEXT, FakeScorer(-8.0), calibration(conformal=(200, 18, 150)))
+        self.assertEqual(result["verdict"], Verdict.CANT_TELL.value)
+        self.assertIn("At least 19 AI calibration texts of this length are needed", result["reasons"][-1])
+
+    def test_band_too_thin_for_any_label_gives_no_verdict(self):
+        result = analyse(LONG_TEXT, FakeScorer(8.0), calibration(conformal=(98, 18, 150)))
+        self.assertEqual(result["verdict"], Verdict.NO_VERDICT.value)
+        self.assertIn("needs at least 99 human or 19 AI calibration texts", result["reasons"][-1])
+
+    def test_score_between_the_classes_is_reported_as_resembling_neither(self):
+        cal = calibration()
+        cal["conformal"] = {"edges": [150], "alpha_human": 0.01, "alpha_ai": 0.05,
+                            "human_scores": [[0.0] * 99], "ai_scores": [[10.0] * 19]}
+        result = analyse(LONG_TEXT, FakeScorer(5.0), cal)
+        self.assertEqual(result["verdict"], Verdict.CANT_TELL.value)
+        self.assertIn("It resembles neither group", result["reasons"][-1])
+
+    def test_length_outside_every_band_gives_no_verdict(self):
+        result = analyse(LONG_TEXT, FakeScorer(8.0), calibration(conformal=(200, 200, 300)))
+        self.assertEqual(result["verdict"], Verdict.NO_VERDICT.value)
+        self.assertIn("no length band for a text of 200 words", result["reasons"][-1])
+
+    def test_calibration_without_the_layer_reports_no_conformal_result(self):
+        self.assertIsNone(analyse(LONG_TEXT, FakeScorer(8.0), calibration())["conformal"])
 
 
 class RenderTextTest(unittest.TestCase):
