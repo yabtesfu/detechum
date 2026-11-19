@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 from detechum.calibration import fit_calibrator
-from detechum.cli import AI_EDITED_NOTE, CAVEAT, analyse, render_text
+from detechum.cli import AI_EDITED_NOTE, CAVEAT, SENTENCE_CAVEAT, analyse, render_text
 from detechum.verdict import Verdict
 
 
@@ -98,6 +98,54 @@ class RenderTextTest(unittest.TestCase):
     def test_report_without_calibration_says_probability_is_not_available(self):
         text = render_text(analyse(LONG_TEXT, FakeScorer(8.0), None))
         self.assertIn("not available", text)
+
+
+class MarkerScorer(FakeScorer):
+    """Adds 3.0 to the base score for every occurrence of the word FLAG."""
+
+    def score(self, texts):
+        return [self._score + 3.0 * t.count("FLAG") for t in texts]
+
+
+MARKED_TEXT = "Plain opening sentence. This one carries a FLAG inside. " + "Plain filler sentence. " * 60
+
+
+class SentenceEffectsTest(unittest.TestCase):
+    def test_sentence_that_raises_the_score_is_listed_with_the_score_without_it(self):
+        result = analyse(MARKED_TEXT, MarkerScorer(-2.0), calibration())
+        sentences = result["sentences"]
+        self.assertEqual(sentences["count"], 62)
+        self.assertEqual(sentences["analysed"], 60)
+        self.assertEqual([s["index"] for s in sentences["strongest"]], [2])
+        self.assertEqual(sentences["strongest"][0]["contribution"], 3.0)
+        self.assertEqual(sentences["strongest"][0]["score_without"], -2.0)
+        self.assertLess(sentences["strongest"][0]["p_ai_without"], result["p_ai"])
+
+    def test_no_sentence_qualifies_when_none_moves_the_score_enough(self):
+        result = analyse(MARKED_TEXT, FakeScorer(8.0), calibration())
+        self.assertEqual(result["sentences"]["strongest"], [])
+        self.assertIn("rests on the text as a whole", render_text(result))
+
+    def test_single_sentence_text_reports_that_effects_cannot_be_measured(self):
+        result = analyse(LONG_TEXT, FakeScorer(8.0), calibration())
+        self.assertEqual(result["sentences"]["analysed"], 0)
+        self.assertIn("fewer than two sentences", render_text(result))
+
+    def test_explain_can_be_switched_off(self):
+        result = analyse(MARKED_TEXT, MarkerScorer(-2.0), calibration(), explain=False)
+        self.assertIsNone(result["sentences"])
+        self.assertNotIn("Sentences that raise the score", render_text(result))
+
+    def test_report_lists_the_sentence_and_the_analysis_limit(self):
+        text = render_text(analyse(MARKED_TEXT, MarkerScorer(-2.0), calibration()))
+        self.assertIn('S2   +3.00  "This one carries a FLAG inside."', text)
+        self.assertIn("Only the first 60 of 62 sentences were analysed.", text)
+        self.assertIn(SENTENCE_CAVEAT, text)
+
+    def test_without_calibration_the_probability_without_the_sentence_is_omitted(self):
+        result = analyse(MARKED_TEXT, MarkerScorer(-2.0), None)
+        self.assertIsNone(result["sentences"]["strongest"][0]["p_ai_without"])
+        self.assertIn("Without it: raw score -2.00\n", render_text(result))
 
 
 if __name__ == "__main__":

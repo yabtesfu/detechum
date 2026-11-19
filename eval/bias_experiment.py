@@ -77,9 +77,11 @@ def sha256(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def verify_models(models_root: Path) -> dict[str, Path]:
+def verify_models(models_root: Path, keys: tuple[str, ...] = tuple(MODELS)) -> dict[str, Path]:
+    """Return the local folder of each model in `keys` after checking its weights against the published SHA 256."""
     paths = {}
-    for key, (repo, _rev, folder, weights, expected) in MODELS.items():
+    for key in keys:
+        repo, _rev, folder, weights, expected = MODELS[key]
         digest = hashlib.sha256()
         with (models_root / folder / weights).open("rb") as fh:
             for chunk in iter(lambda: fh.read(1 << 24), b""):

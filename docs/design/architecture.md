@@ -163,6 +163,19 @@ Rules:
   show low perplexity for legitimate reasons. The report links to the measured nonnative FPR.
 * Reasons describe the *text*, never the person's intent.
 
+Status of the implementation (`src/detechum/explain.py`):
+
+* **Sentence effects are implemented by removal.** Each sentence is removed in turn and the rest is scored
+  again with the primary scorer. The drop in the score is that sentence's contribution. This is exact about
+  the scorer and needs no second signal. Contributions do not add up to the score, and for a text longer
+  than the scorer's input limit they are less reliable.
+* **A listed sentence is not proof that it is AI written.** With one GPT 3 sentence planted in each of 50
+  native human essays, the planted sentence ranked first in 27 (chance: 6.9%), and a human first sentence
+  ranked first in 9 of 48 (chance: 6.9%). Only 11 of the 50 planted sentences moved the score by the display
+  minimum of 1.0. The report states this next to the list (evaluation plan §8).
+* **The templates of the table above are not implemented.** The top 1 token rate did not pass the nonnative
+  test (§8 below). The others have not been tested.
+
 ## 6. (d) Revision mode
 
 Revision mode suggests rewrites, sentence by sentence. It is honest about what it changed and what it
@@ -215,6 +228,7 @@ Hard rules (enforced in code and tests):
   75/91 (82.4%) of TOEFL essays polished by GPT 4 and 40/88 (45.5%) of native essays simplified by GPT. A two
   way verdict has no accurate answer for these texts. Candidates: a separate "AI edited" label, a softer
   verdict for this case, or a note in the explanation.
-* Whether the token rank and entropy features of the explanation layer show the same nonnative skew as the
-  perplexity ratio. They rest on the same predictability signal and have not been tested. Test them on the
-  nonnative stratum before they appear next to a verdict.
+* What reference the token rank and entropy templates compare against. In the pilot, 83 of 91 TOEFL essays
+  have a top 1 token rate above the median of native essays of the same length (evaluation plan §8), so a
+  single "human median" misleads nonnative writers. These templates stay out of the report until a
+  reference by writer group and length passes the nonnative test.
