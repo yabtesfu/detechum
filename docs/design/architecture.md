@@ -159,6 +159,16 @@ Status of the implementation:
 * Calibration drifts as new LLMs come out. Each release lists its calibration data generation date and the
   generator models it covered. Unseen generators are an explicit limitation, not a hidden one.
 
+Status of the implementation:
+
+* **One calibration has been measured on a test split:** `results/eval_v1/calibration.json`, fitted on the
+  calib split of `eval_plan_v1` (evaluation plan §9). Its report has an ECE of 0.0037 overall, per stratum
+  values for length, domain, source, writer group and generator, and one reliability diagram for all
+  texts. Diagrams per stratum are not drawn yet.
+* The calib split has no native writers outside the 2023 pilot essays and no AI written student essays
+  outside the 2023 GPT 3 essays. The calibration therefore says little about those texts, and the report
+  says so.
+
 ## 5. (b) Sentence reasons the writer can act on
 
 Each reason is a **template plus measured evidence plus a comparison to calibrated human text**, never free
