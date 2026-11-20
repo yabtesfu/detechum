@@ -6,8 +6,11 @@ Changing a metric or a pass criterion after it requires a new tag and a written 
 out picking metrics after seeing results.
 
 The tag fixes the metrics, their thresholds and the verdict rules. It does not fix the corpora: §1 lists
-candidates whose licenses are not confirmed. No split manifest exists yet, so no test split exists and no
-run on one has been made. Of the harness in §4, only the thresholds file exists.
+candidates whose licenses are not confirmed.
+
+State after the tag: the corpora were chosen and split on 19 Nov 2026, and the one run on that test split
+was made on 20 Nov 2026 (§9). The text of §1 to §8 is unchanged since the tag except for this paragraph and
+the state note in §4.
 
 Sources for design choices: [`../research/phase1_methods.md`](../research/phase1_methods.md).
 
@@ -156,6 +159,10 @@ Makefile                   # `make reproduce RELEASE=x.y.z`
 * State at the tag: `eval/config/thresholds.yaml` exists. `scorers.yaml`, the manifests, `run.py`, `report.py`,
   the Dockerfile and the Makefile do not. Model revisions and file digests are pinned in
   `src/detechum/models.py`.
+* State after eval_v1 (§9): the calib and test manifests, `run.py` and `report.py` exist, together with
+  `fetch_data.py`, `corpora.py`, `build_manifests.py` and `score_corpora.py`. Predictions are written as
+  `predictions.jsonl` and the reliability diagram as one SVG for all texts. `scorers.yaml`, the Dockerfile,
+  the Makefile and the CI job do not exist, so the test run was made by hand and not by CI.
 
 ## 5. RAID submission
 
@@ -404,3 +411,72 @@ What the pilot means for this plan:
 1. **Each length band of the calib split needs at least 99 human texts before any text of that length can be
    labelled as AI**, and 19 AI texts before one can be labelled as human written. The M1 rule of 300 human
    texts per stratum on test is stricter and applies in addition.
+
+## 9. Runs on the test split
+
+### eval_v1 (20 Nov 2026)
+
+* **Data:** the calib split (6,606 texts) and the test split (5,712 texts) drawn by
+  `eval/build_manifests.py` with seed `20261119`. Splits are grouped by prompt or document, and the pilot
+  texts were forced into calib. Six duplicates were dropped, and no group is in both splits. Sources:
+  ELLIPSE essays by English learners, the TextSight 2026 benchmark (human passages and five 2026 models), a
+  sample of the unattacked rows of MELD-eval (four 2026 chat models and their human passages, which come from
+  RAID) and, in calib only, the pilot texts of Liang et al.
+* **Test split:** 3,342 nonnative and 236 unknown human texts, no native human text, and 1,567 AI texts. The
+  567 human texts of MELD-eval are reported on their own, because they come from RAID.
+* **Harness:** `eval/score_corpora.py`, `eval/run.py` and `eval/report.py`. Outputs:
+  [`results/eval_v1/`](../../results/eval_v1/report.md). `run.py` refuses a second run on test once
+  `metrics.json` exists.
+
+Recorded before the run on test:
+
+* A speed test scored 64 ELLIPSE essays before the split was drawn. The split does not use scores, so this
+  could not shape it.
+* The model card of GPTTrace v8s 1B lists RAID train, MAGE, ASAP 2.0 and PIILO among its training data. RAID
+  human texts are therefore reported on their own, and PERSUADE was left out, because it may overlap with
+  ASAP 2.0.
+* The test split holds no native human text, so the ratio of M3 cannot be computed and the gate cannot pass.
+* Most human texts are student essays and most AI texts are chat model answers in other domains. A number that
+  mixes the classes also measures this difference in kind.
+* The harness was rehearsed on calib alone, with half of its groups standing in for test. Two defects of the
+  report were fixed after the rehearsal: the order of the length bands and the wording of the note on native
+  texts in a rehearsal. No metric, threshold or rule was changed.
+* The run log records commit `ef3bb8b`, the commit that was checked out. The harness files were not yet
+  committed at the time of the run. The commit that adds them carries them as they were when the run was made.
+
+Results (95% Clopper Pearson intervals):
+
+| Measure | Result | Target in §2 |
+|---|---|---|
+| M1: AI texts flagged at the threshold that flags 1% of human calib texts | 1557/1567 = 99.4% (98.8 to 99.7) | |
+| M1: human test texts flagged at that threshold | 1/3578 = 0.03% (0.0 to 0.2) | |
+| M2: ECE, 15 equal mass bins | 0.0037 | at most 0.03: met |
+| M3: nonnative human texts flagged | 1/3342 (upper bound 0.2%) | upper bound at most 2%: met |
+| M3: ratio of nonnative to native rate | not computable | at most 1.5 |
+| M3 gate | not evaluable | |
+| M4 | not run: no attacked text | |
+| Human texts of 150 words or more labelled "Likely AI written or AI edited" | 0/3441 (0.0 to 0.1) | |
+| AI texts of 150 words or more labelled "Likely human written" | 5/1564 = 0.3% (0.1 to 0.7) | |
+| Human texts with "human" ruled out by the conformal layer | 2/3441 = 0.1% (0.0 to 0.2) | 1% |
+| AI texts with "AI" ruled out by the conformal layer | 71/1564 = 4.5% (3.6 to 5.7) | 5% |
+| RAID human texts flagged, reported on their own | 1/567 = 0.2% (0.0 to 1.0) | |
+
+Limits:
+
+* **The numbers are better than real use is likely to be.** The difference in kind between the classes makes
+  them easier to separate than authorship alone would. The AUROC is 1.0000.
+* **No AI text on test is a student essay.** The true positive rate on AI written essays is not measured.
+* **No native writer is on test,** so the run says nothing about whether nonnative writers are flagged more
+  often than native ones.
+* **Few texts of the newest models.** TextSight adds 26 AI texts from five models. Of the seven texts of
+  claude-opus-5, five were flagged (29.0 to 96.3).
+* The scorer's author reports results on MELD-eval and on the TextSight benchmark. Neither is listed as
+  training data, but both may have guided the choice of the released model.
+* "Nonnative" means two things: school essays by English learners, and research papers whose authors work in
+  countries where English is not the main language (the label of TextSight, inferred from the affiliation).
+
+What the run means for this plan:
+
+1. This test split has been used. A run with new corpora needs a new split and a new tag, `eval_plan_v2`.
+2. The gaps to close before that run are native human essays that the scorer has not seen, AI written
+   student essays and attacked text for M4.

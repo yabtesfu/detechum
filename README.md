@@ -12,6 +12,7 @@ Open-source AI content detection and analysis platform focused on accuracy, expl
 | 4: Preregistered evaluation plan | [docs/evaluation/plan.md](docs/evaluation/plan.md)                                                                                             |
 
 Pilot results on nonnative writer bias, with per text scores: [results/bias_v1/report.md](results/bias_v1/report.md).
+First run on the test split of the evaluation plan: [results/eval_v1/report.md](results/eval_v1/report.md).
 
 ## Development
 
@@ -35,7 +36,7 @@ Every file is checked against the SHA 256 pinned for its revision in `src/detech
 ## Scoring a text
 
 ```bash
-.venv/bin/detechum score essay.txt --calibration results/calibration_pilot_v2/calibration.json
+.venv/bin/detechum score essay.txt --calibration results/eval_v1/calibration.json
 ```
 
 The command removes invisible characters and lookalike letters, scores the text with GPTTrace v8s 1B, maps the
@@ -57,12 +58,18 @@ the installed code.
 
 Current limits:
 
-* The only calibration is a pilot fitted on 746 texts from 2023
-  ([report](results/calibration_pilot_v2/report.md)). Its probabilities are not validated for any real use.
-* With `calibration.json` of the pilot, no text is labelled as AI. Labelling a text as AI at the 1% error
-  target needs 99 human calibration texts of similar length, and the pilot has at most 98 in a length band.
-  `calibration_single_band.json` in the same folder pools all lengths from 150 words up and does give the
-  label, with an error rate that holds on average over those lengths and not at each length.
+* The calibration was fitted on the calib split of the evaluation plan: 3,941 human and 1,886 AI texts
+  ([report](results/eval_v1/report.md)). The human texts are mostly school essays by English learners,
+  and the AI texts mostly answers of 2026 chat models in other domains. P(AI) assumes that mix of texts.
+* On the test split, no human text of 150 words or more was labelled as AI (0 of 3,441), and 1,493 of 1,564
+  AI texts were. These numbers are better than real use is likely to be, because the two classes differ in
+  kind as well as in authorship.
+* Not tested yet: native English writers, AI written student essays, and paraphrased or humanized AI text.
+  The nonnative release gate of the plan could not be evaluated, because the test split has no native
+  writers.
+* The earlier pilot calibration is kept in [results/calibration_pilot_v2/](results/calibration_pilot_v2/report.md).
+  With it, no text is labelled as AI, because no length band has the 99 human texts that the 1% error target
+  needs.
 * The command does not detect the language or the kind of text. A text unlike the calibration texts is
   scored like any other.
 * Texts under 150 words get no verdict.
@@ -78,6 +85,22 @@ Current limits:
 `.venv/bin/python eval/calibration_pilot.py` rebuilds the pilot calibration files and their report from the
 committed scores. It needs no model weights.
 
+To rebuild `results/eval_v1` from the corpora:
+
+```bash
+git clone https://github.com/Weixin-Liang/ChatGPT-Detector-Bias data/external/liang
+.venv/bin/python eval/fetch_data.py                 # about 23 MB, every file checked against its SHA 256
+.venv/bin/python eval/build_manifests.py            # compare with the committed eval/manifests
+cd eval
+../.venv/bin/python score_corpora.py --data ../data/external --manifests manifests \
+    --models ../data/external/models --out ../results/eval_v1
+../.venv/bin/python run.py && ../.venv/bin/python report.py ../results/eval_v1
+```
+
+Scoring the 12,318 texts took about three hours on the development machine and keeps it busy. It can be
+stopped and started again; scores already saved are kept. `run.py` refuses to run on test when
+`results/eval_v1/metrics.json` exists, so move that file away first to recompute it.
+
 The `eval_plan_v1` tag is the freeze reference for the metrics, thresholds and verdict rules in
-[docs/evaluation/plan.md](docs/evaluation/plan.md) and `eval/config/thresholds.yaml`. No run on the test split
-may precede that tag.
+[docs/evaluation/plan.md](docs/evaluation/plan.md) and `eval/config/thresholds.yaml`. The one run on its test split,
+`eval_v1`, is recorded in §9 of the plan.
