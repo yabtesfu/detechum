@@ -6,7 +6,7 @@ import numpy as np
 
 from detechum.calibration import fit_calibrator
 from detechum.conformal import fit_conformal
-from detechum.cli import AI_EDITED_NOTE, CAVEAT, SENTENCE_CAVEAT, _load_scorer, analyse, render_text
+from detechum.cli import AI_EDITED_NOTE, CAVEAT, SENTENCE_CAVEAT, _load_scorer, analyse, render_text, select_kind
 from detechum.models import GPTTRACE
 from detechum.verdict import Verdict
 
@@ -150,6 +150,41 @@ class ConformalLayerTest(unittest.TestCase):
 
     def test_calibration_without_the_layer_reports_no_conformal_result(self):
         self.assertIsNone(analyse(LONG_TEXT, FakeScorer(8.0), calibration())["conformal"])
+
+
+def calibration_with_kinds():
+    """A calibration for all texts and one for essays, told apart by name and threshold."""
+    essay = calibration(tau=0.9)
+    essay.update(name="essay_calibration", description="synthetic essays")
+    del essay["scorer"]
+    return calibration() | {"kinds": {"student_essay": essay}}
+
+
+class KindTest(unittest.TestCase):
+    def test_without_a_kind_the_calibration_for_all_texts_is_used(self):
+        cal = calibration_with_kinds()
+        self.assertIs(select_kind(cal, None), cal)
+        result = analyse(LONG_TEXT, FakeScorer(8.0), select_kind(cal, None))
+        self.assertEqual(result["calibration"]["name"], "test_calibration")
+        self.assertIsNone(result["calibration"]["kind"])
+
+    def test_a_kind_selects_its_own_calibration_and_says_so(self):
+        result = analyse(LONG_TEXT, FakeScorer(8.0), select_kind(calibration_with_kinds(), "student_essay"))
+        self.assertEqual(result["calibration"]["name"], "essay_calibration")
+        self.assertEqual(result["calibration"]["kind"], "student_essay")
+        self.assertEqual(result["tau"], 0.9)
+        self.assertTrue(any("does not check" in r for r in result["reasons"]))
+        self.assertIn("student_essay", render_text(result))
+
+    def test_an_unknown_kind_is_rejected_with_the_kinds_on_offer(self):
+        with self.assertRaises(ValueError) as raised:
+            select_kind(calibration_with_kinds(), "poetry")
+        self.assertIn("student_essay", str(raised.exception))
+
+    def test_a_kind_is_rejected_by_a_calibration_without_kinds(self):
+        with self.assertRaises(ValueError) as raised:
+            select_kind(calibration(), "student_essay")
+        self.assertIn("none", str(raised.exception))
 
 
 class RenderTextTest(unittest.TestCase):

@@ -17,6 +17,7 @@ detechum = "detechum.cli:main"
 
 [project.optional-dependencies]
 models = ["torch", "transformers", "safetensors", "tokenizers"]
+eval = ["pyarrow"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

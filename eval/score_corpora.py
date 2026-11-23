@@ -14,7 +14,7 @@ from pathlib import Path
 
 import torch
 
-from corpora import load_all
+from corpora import load_all, load_all_v2
 from detechum.models import GPTTRACE, ModelVerificationError, verify_model
 from detechum.normalize import normalize
 from detechum.scorers.gpttrace import GPTTraceScorer
@@ -29,13 +29,14 @@ def main():
     ap.add_argument("--models", type=Path, default=Path("data/external/models"))
     ap.add_argument("--out", type=Path, default=Path("results/eval_v1"))
     ap.add_argument("--device", default="mps" if torch.backends.mps.is_available() else "cpu")
+    ap.add_argument("--v2", action="store_true", help="read the corpora of eval_plan_v2 (plan §10)")
     args = ap.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
 
     wanted = {json.loads(line)["sha256"] for split in ("calib", "test")
               for line in (args.manifests / f"{split}.jsonl").read_text().splitlines()}
     texts = {}
-    for r in load_all(args.data):
+    for r in (load_all_v2 if args.v2 else load_all)(args.data):
         texts.setdefault(hashlib.sha256(r["text"].encode("utf-8")).hexdigest(), r["text"])
     missing = wanted - texts.keys()
     if missing:

@@ -70,6 +70,25 @@ def _conformal_reasons(conformal: ConformalResult, interval_verdict: Verdict, ve
     return reasons + [blocked]
 
 
+def select_kind(calibration: dict, kind: str | None) -> dict:
+    """The part of a calibration file fitted on texts of one kind, or the whole file when `kind` is None.
+
+    A calibration file may hold, under "kinds", calibrations fitted only on texts of one kind, such as
+    student essays. A text is then compared only with texts of that kind. The kind is declared by the
+    user and is not checked against the text.
+
+    Raises ValueError if the file holds no calibration for `kind`.
+    """
+    if kind is None:
+        return calibration
+    kinds = calibration.get("kinds") or {}
+    if kind not in kinds:
+        offered = ", ".join(sorted(kinds)) or "none"
+        raise ValueError(f"calibration {calibration['name']!r} has no calibration for texts of the kind {kind!r}. "
+                         f"Kinds it has: {offered}.")
+    return kinds[kind] | {"scorer": calibration["scorer"], "kind": kind}
+
+
 def analyse(text: str, scorer, calibration: dict | None, explain: bool = True, model: dict | None = None) -> dict:
     """Score one text and return every value the report shows.
 
@@ -113,8 +132,11 @@ def analyse(text: str, scorer, calibration: dict | None, explain: bool = True, m
     tau = calibration["tau"]
     result.update(
         calibration={"name": calibration["name"], "description": calibration["description"],
-                     "n_human": calibrator.n_human, "n_ai": calibrator.n_ai},
+                     "kind": calibration.get("kind"), "n_human": calibrator.n_human, "n_ai": calibrator.n_ai},
         p_ai=doc.p_ai, interval=[doc.p_low, doc.p_high], tau=tau)
+    if calibration.get("kind"):
+        reasons.append(f"The text was compared only with calibration texts of the kind {calibration['kind']}, as "
+                       "requested. The tool does not check that the text is of that kind.")
     if tau is None:
         reasons.append("This calibration has no threshold that meets its false positive target.")
         return result
@@ -163,7 +185,9 @@ def render_text(result: dict) -> str:
         lines.append(row("Model", f"{model['repo']} at revision {model['revision'][:12]}, files verified by SHA 256"))
     if result["calibration"]:
         cal = result["calibration"]
-        lines.append(row("Calibration", f"{cal['name']}, fitted on {cal['n_human']} human and {cal['n_ai']} AI texts"))
+        kind = f" of the kind {cal['kind']}" if cal.get("kind") else ""
+        lines.append(row("Calibration", f"{cal['name']}, fitted on {cal['n_human']} human and {cal['n_ai']} AI "
+                                        f"texts{kind}"))
         lines.append(f"  {cal['description']}")
     lines += ["", "Why"] + [f" * {reason}" for reason in result["reasons"]]
     lines += _render_sentences(result["sentences"])
@@ -218,6 +242,8 @@ def main(argv: list[str] | None = None) -> int:
         "score", help="estimate P(AI) for one text file")
     score.add_argument("file", help="path of a UTF 8 text file, or - for standard input")
     score.add_argument("--calibration", type=Path, help="calibration file; without it no verdict is given")
+    score.add_argument("--kind", help="compare the text only with calibration texts of this kind, such as "
+                                      "student_essay; the calibration file lists the kinds it has")
     score.add_argument("--models", type=Path, default=Path("data/external/models"))
     score.add_argument("--device", help="torch device; chosen automatically when omitted")
     score.add_argument("--json", action="store_true", help="print the full result as JSON")
@@ -226,6 +252,12 @@ def main(argv: list[str] | None = None) -> int:
 
     text = sys.stdin.read() if args.file == "-" else Path(args.file).read_text(encoding="utf-8")
     calibration = json.loads(args.calibration.read_text()) if args.calibration else None
+    if args.kind and calibration is None:
+        raise SystemExit("--kind needs --calibration")
+    try:
+        calibration = select_kind(calibration, args.kind) if calibration else None
+    except ValueError as exc:
+        raise SystemExit(str(exc))
     scorer, model = _load_scorer(args.models, args.device)
     try:
         result = analyse(text, scorer, calibration, explain=not args.no_explain, model=model)
