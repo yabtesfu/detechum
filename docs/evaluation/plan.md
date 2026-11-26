@@ -562,6 +562,53 @@ Decisions of 21 Nov 2026. The owner left the three questions below to the recomm
   the human and AI essays overlap (2 of 463 human essays score higher, 20 of 293 AI essays lower), and only a
   stronger signal of the scorer can separate them.
 
+**A second signal, decided on 23 Nov 2026 before the tag.** The owner approved the download of the Desklib
+AI text detector v1.01 (DeBERTa v3 large fine tuned on RAID, MIT, 1.74 GB, pinned in `detechum.models`) and
+asked that the tag wait for this test. The earlier second signal, the Binoculars style ratio of the local
+Qwen pair, flagged 52.7% of the TOEFL essays of bias_v1 (§8), so a second signal is first tested for the same
+fault. Desklib scores the calib split only (`score_corpora.py --scorer desklib --splits calib`). The rule
+below was written before any Desklib score was seen. All of it uses the rehearsal halves of calib: fit on
+one half, measure on the other, student essays only, with the threshold that flags 1% of the human essays
+of the fitting half.
+
+1. **Desklib is ruled out** if, on its own, the 95% upper bound of its flag rate on the nonnative human
+   essays exceeds 2%, the bound of M3.
+2. **The combination is adopted** only if all of these hold. It is a logistic regression on the two raw
+   scores fitted on the fitting half, and its output replaces the raw score of GPTTrace in calibration.
+   * Its true positive rate is higher than that of GPTTrace alone at GPTTrace's own threshold.
+   * The 95% upper bound of its flag rate on the nonnative human essays is at most 2%.
+   * No human source of student essays is flagged more often than with GPTTrace alone.
+   * Run through `run_v2.py --rehearsal`, it gives no more human texts the label "Likely AI written or AI
+     edited" than GPTTrace alone.
+3. If the combination is not adopted, eval_plan_v2 is tagged with GPTTrace alone and the result is
+   recorded here.
+
+Order of events: the tag `eval_plan_v2` was made at 13:53 on 23 Nov 2026 on commit `30a8a94`, eight minutes
+before the owner asked for it to wait. The frozen plan therefore names GPTTrace alone, and this test of a
+second signal was run after the tag, on calib only. No test text was scored with Desklib.
+
+**Result (scored 25 and 26 Nov 2026, `results/second_signal_v1/`): the combination is not adopted.** On the
+held out half of the calib student essays (2,023 human, 1,130 AI), at the threshold that flags 1% of the
+human essays of the fitting half:
+
+| Score | True positive rate | Nonnative human essays flagged | Human essays flagged per source |
+|---|---|---|---|
+| GPTTrace alone | 91.8% (90.0 to 93.3) | 3 of 1,625, upper bound 0.5% | ELLIPSE 0, GEDE 0, Ghostbuster 18, Liang 6 |
+| Desklib alone | 92.5% (90.8 to 93.9) | 11 of 1,625, upper bound 1.2% | ELLIPSE 3, GEDE 1, Ghostbuster 4, Liang 10 |
+| Combination | 94.1% (92.5 to 95.4) | 11 of 1,625, upper bound 1.2% | ELLIPSE 2, GEDE 2, Ghostbuster 4, Liang 11 |
+
+1. Desklib is not ruled out: its upper bound on the nonnative essays is 1.2%, within 2%.
+2. The combination meets three conditions and fails one. It catches more AI essays, its nonnative bound is
+   within 2%, and in the rehearsal it gives no human student essay the label "Likely AI written or AI
+   edited" (GPTTrace alone: 7 of 1,916; all texts: 3 of 2,143 against 7). But it flags more human essays of
+   ELLIPSE, GEDE and Liang than GPTTrace alone, and the nonnative essays flagged rise from 3 to 11. That
+   fails the condition that no human source is flagged more often, so the combination is not adopted.
+
+The trade is the one this project refuses: fewer polished human essays of unknown writers (Ghostbuster) are
+flagged, and more essays of English learners are. The essay of the reason above gets a combined score of
+-0.85 against a threshold of -0.13, so the combination would not have flagged it either. eval_plan_v2 stays
+as tagged, with GPTTrace alone.
+
 The questions as they were put:
 
 * **The ratio of M3 is undefined when no native text is flagged.** With 0 flagged native texts, §2 gives no

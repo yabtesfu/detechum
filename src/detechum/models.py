@@ -95,8 +95,28 @@ QWEN_INSTRUCT = PinnedModel(
     ),
 )
 
+# Candidate second signal (plan §10), pinned on 2026-11-23. The blob ids of the git files matched the
+# hub's listing of this revision. README.md and .gitattributes are not needed to load the model and
+# are not fetched.
+DESKLIB = PinnedModel(
+    repo="desklib/ai-text-detector-v1.01", revision="5fdea974cd4287c61674951ec78803aa274e2fb7",
+    folder="desklib-ai-text-detector-v1.01",
+    weights=PinnedFile("model.safetensors", 1736100972,
+                       "c024a1704c65f5a4bffeda58745c58fc0ed67d6ca07b158b068a257238815265"),
+    other_files=(
+        PinnedFile("config.json", 890, "a9512ad54a256ca2e26bb16336cfcaa7c93d071a8667c659044003ef3973a9e2"),
+        PinnedFile("added_tokens.json", 23, "dc046d04c9b0ada7ae6f1dc89c465801799acdf0c9a6aab8c15a1b2d5ca4e91f"),
+        PinnedFile("special_tokens_map.json", 286,
+                   "9463f61e1b109a8eb4688b829260d7c6b1e6dff04c98ff7269bb89e2b92369b9"),
+        PinnedFile("spm.model", 2464616, "c679fbf93643d19aab7ee10c0b99e460bdbc02fedf34b92b05af343b4af586fd"),
+        PinnedFile("tokenizer.json", 8656624, "5124ef2ead1a10a717703bc436de7f353da76d6340e4587719b42b1693707964"),
+        PinnedFile("tokenizer_config.json", 1315,
+                   "e6c4c771911c211618a2d46488dc7e9e499f051773cd4ff4faeca6fe55fdf569"),
+    ),
+)
+
 # Download priority order: the primary scorer first.
-MODELS = {"gpttrace": GPTTRACE, "qwen_base": QWEN_BASE, "qwen_instruct": QWEN_INSTRUCT}
+MODELS = {"gpttrace": GPTTRACE, "qwen_base": QWEN_BASE, "qwen_instruct": QWEN_INSTRUCT, "desklib": DESKLIB}
 
 
 class ModelVerificationError(Exception):
