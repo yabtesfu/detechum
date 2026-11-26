@@ -56,6 +56,28 @@ FILES = [
      "31fd6010989b7befddf11e95dbd9fc5334a71be0f28e9fb9679c742ead57a537"),
 ]
 
+# Added for eval_plan_v2 (plan §10), downloaded on 2026-11-20 with the project owner's approval. Each
+# digest matched the one published for the pinned revision (the git blob id for GEDE, the LFS SHA 256 for
+# the two Hugging Face files).
+V2_FILES = [
+    # GEDE (Gehring et al.): CC BY-NC-SA 4.0, as stated in the repository README.
+    ("gede/database.db.zip",
+     "https://raw.githubusercontent.com/lukasgehring/Assessing-LLM-Text-Detection-in-Educational-Contexts/"
+     "fc84dfe33619eefbc3a6014c191ad9a43f8543cc/database/database.db.zip",
+     "56c8327bc3d44d7da285acbe686203e49dd4597d9f7eccac53046eafaba919f0"),
+    # Ghostbuster essays (Verma et al.): CC BY 3.0 in the original repository vivek3141/ghostbuster-data.
+    # This copy is a mirror that states no license of its own.
+    ("ghostbuster/train-00000-of-00001.parquet",
+     "https://huggingface.co/datasets/Joshfcooper/ghostbuster-essay-dataset/resolve/"
+     "9a94402f1127f3c3455a7c4155c50314ec0cbab4/data/train-00000-of-00001.parquet",
+     "9ab0bd75501ef6c7c76c36fc4ed6cae2fe8258279a2746a52215bdf5caf8ee74"),
+    # DACTYL: MIT. Only the test split is used.
+    ("dactyl/test.parquet",
+     "https://huggingface.co/datasets/ShantanuT01/DACTYL/resolve/d4175fd68ac7c5890afe24fb387a4ad76053a4be/"
+     "test.parquet",
+     "479de73bc1b412a3b0ce9b0a11bedbddae4996881fcd5e14d91a3d2d6f737a43"),
+]
+
 MELD_URL = ("https://huggingface.co/datasets/odeveloper/meld-eval/resolve/"
             "b0c10f3bdf7737aae2b61f6d0332f47c291a1319/meld_eval.jsonl")
 MELD_SIZE = 634064489
@@ -143,8 +165,9 @@ def fetch_meld_sample(out: Path) -> None:
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--dest", type=Path, default=Path("data/external"))
+    ap.add_argument("--v2", action="store_true", help="also download the corpora added for eval_plan_v2 (156 MB)")
     args = ap.parse_args()
-    for path, url, sha in FILES:
+    for path, url, sha in FILES + (V2_FILES if args.v2 else []):
         fetch_file(url, args.dest / path, sha)
     fetch_meld_sample(args.dest / MELD_SAMPLE)
     print("all evaluation data downloaded and verified", flush=True)

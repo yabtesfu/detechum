@@ -1,11 +1,11 @@
-"""Download the pinned model files used by eval/bias_experiment.py into data/external/models.
+"""Download the pinned model files of `detechum.models` into data/external/models.
 
 Weight files are fetched as fixed size byte ranges over several connections. Each range is stored as
 its own part file, so an interrupted run loses at most the unfinished ranges and a rerun skips every
 completed one. Every file is checked against the SHA 256 pinned in `detechum.models`.
 
 Usage:
-    .venv/bin/python eval/fetch_models.py [--dest data/external/models] [--workers 8]
+    .venv/bin/python eval/fetch_models.py [--dest data/external/models] [--workers 8] [--only desklib]
 """
 
 import argparse
@@ -137,8 +137,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dest", type=Path, default=Path("data/external/models"))
     ap.add_argument("--workers", type=int, default=8)
+    ap.add_argument("--only", choices=MODELS, help="fetch this model only")
     args = ap.parse_args()
-    for m in MODELS.values():
+    for m in [MODELS[args.only]] if args.only else MODELS.values():
         root = args.dest / m.folder
         print(f"{m.repo}@{m.revision[:7]}", flush=True)
         for f in m.other_files:

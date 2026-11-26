@@ -1,5 +1,8 @@
 """Score every text of the split manifests with the primary scorer (docs/evaluation/plan.md §4).
 
+`--scorer desklib` scores with the candidate second signal of plan §10 instead, into
+scores_desklib.jsonl. `--splits calib` scores the calib split only.
+
 Texts are normalized first, as `detechum score` does, so the scores are those the command would
 give. The output holds one row per text with its SHA 256 and no label, so that writing it reads no
 label of the test split. An interrupted run continues from the rows already written.
@@ -14,10 +17,13 @@ from pathlib import Path
 
 import torch
 
-from corpora import load_all
-from detechum.models import GPTTRACE, ModelVerificationError, verify_model
+from corpora import load_all, load_all_v2
+from detechum.models import DESKLIB, GPTTRACE, ModelVerificationError, verify_model
 from detechum.normalize import normalize
 from detechum.scorers.gpttrace import GPTTraceScorer
+
+SCORERS = {"gpttrace": (GPTTRACE, "scores.jsonl", lambda folder, device: GPTTraceScorer(folder, device, typography=False)),
+           "desklib": (DESKLIB, "scores_desklib.jsonl", None)}
 
 BATCH = 8
 
@@ -29,26 +35,35 @@ def main():
     ap.add_argument("--models", type=Path, default=Path("data/external/models"))
     ap.add_argument("--out", type=Path, default=Path("results/eval_v1"))
     ap.add_argument("--device", default="mps" if torch.backends.mps.is_available() else "cpu")
+    ap.add_argument("--v2", action="store_true", help="read the corpora of eval_plan_v2 (plan §10)")
+    ap.add_argument("--scorer", choices=SCORERS, default="gpttrace")
+    ap.add_argument("--splits", nargs="+", choices=("calib", "test"), default=["calib", "test"])
     args = ap.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
 
-    wanted = {json.loads(line)["sha256"] for split in ("calib", "test")
+    wanted = {json.loads(line)["sha256"] for split in args.splits
               for line in (args.manifests / f"{split}.jsonl").read_text().splitlines()}
     texts = {}
-    for r in load_all(args.data):
+    for r in (load_all_v2 if args.v2 else load_all)(args.data):
         texts.setdefault(hashlib.sha256(r["text"].encode("utf-8")).hexdigest(), r["text"])
     missing = wanted - texts.keys()
     if missing:
         raise SystemExit(f"{len(missing)} manifest texts are not in {args.data}; rerun eval/fetch_data.py")
 
-    scores_file = args.out / "scores.jsonl"
+    pinned, filename, build = SCORERS[args.scorer]
+    scores_file = args.out / filename
     done = {json.loads(line)["sha256"] for line in scores_file.read_text().splitlines()} if scores_file.exists() else set()
     todo = sorted(wanted - done)
     print(f"{len(done)} texts already scored, {len(todo)} to score", flush=True)
     if not todo:
         return
     try:
-        scorer = GPTTraceScorer(verify_model(GPTTRACE, args.models), args.device, typography=False)
+        folder = verify_model(pinned, args.models)
+        if build is None:  # imported only when used, so that the GPTTrace runs need nothing new
+            from detechum.scorers.desklib import DesklibScorer
+            scorer = DesklibScorer(folder, args.device)
+        else:
+            scorer = build(folder, args.device)
     except ModelVerificationError as exc:
         raise SystemExit(f"{exc}; rerun eval/fetch_models.py")
     with scores_file.open("a") as fh:

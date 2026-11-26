@@ -480,3 +480,183 @@ What the run means for this plan:
 1. This test split has been used. A run with new corpora needs a new split and a new tag, `eval_plan_v2`.
 2. The gaps to close before that run are native human essays that the scorer has not seen, AI written
    student essays and attacked text for M4.
+
+### eval_v2 (26 Nov 2026)
+
+* **Plan:** `eval_plan_v2`, tagged on commit `30a8a94` (the changes of §10). One run on test, at 17:28 UTC,
+  logged as `30a8a94 with uncommitted changes`. The uncommitted files were the test of a second signal of
+  §10, which `eval/run_v2.py` does not read; the harness, thresholds, manifests and scores were checked to be
+  identical to the tag before the run.
+* **Outputs:** [`results/eval_v2/report.md`](../../results/eval_v2/report.md), with `metrics.json`, the
+  calibration file (with its `student_essay` entry) and the predictions as hashes and numbers.
+
+| | All texts | Student essays (`--kind student_essay`) |
+|---|---|---|
+| Test texts | 4,300 human, 3,302 AI | 3,967 human, 1,735 AI |
+| M1 true positive rate | 94.4% (93.5 to 95.1) | 90.6% (89.1 to 91.9) |
+| M1 realized false positive rate | 0.5% (0.3 to 0.8) | 0.9% (0.6 to 1.2) |
+| M2 ECE (target 0.03) | 0.0118, met | 0.0105, met |
+| M3 gate (rule of §2) | not evaluable | not evaluable |
+| M4, DIPPER | 100% to 98.3%, drop 1.7 points (-0.3 to 9.2) | same texts, same result |
+| Human texts labelled "Likely AI", 150 words or more | 15 of 4,151 | 15 of 3,910 |
+| AI texts labelled "Likely human", 150 words or more | 171 of 3,275 | 121 of 1,711 |
+
+What the run shows:
+
+* **No essay of an English learner or of a native writer was flagged.** ELLIPSE 0 of 3,245, BAWE 0 of 242.
+  All 15 human texts labelled "Likely AI" are Ghostbuster essays from IvyPanda (unknown writers), which are
+  also flagged at the M1 threshold 4.4% (all texts) and 7.1% (student essays) of the time.
+* **M3 is not evaluable** under the rule of §2, adopted on 21 Nov: no native text is flagged, so the ratio
+  has no value. Under the rule of upper bounds, shown for comparison only, the gate passes (nonnative upper
+  bound 0.1% to 0.2%, native 2.0%).
+* **Weak generators:** Llama 70% to 71% (most are DACTYL's small and fine tuned models), DACTYL as a whole
+  76% to 77%, AI essays in the voice of a learner of English 75% to 77%, Claude in student essays 79%
+  (Claude 3.5 of DACTYL and Claude of 2023 in Ghostbuster). Qwen and GPT essays: 99% to 100%.
+* **The conformal layer misses its AI target on test.** It rules out the own class of 5.9% (all texts) and
+  7.4% (student essays) of the AI texts, against 5%. The test AI texts come from generators whose share
+  differs from calib, so the exchangeability the guarantee needs does not hold across generators. The
+  human target of 1% is met (0.7% and 0.9%).
+* **AI edited human essays** (GEDE): improved by an AI, flagged 74% to 79%; rewritten by an AI, 95% to 96%.
+
+Limits: the 300 Claude essays, the texts of eval_v1 and one pooled look at the new scores (§10) were seen
+before the run. Commercial humanizers, light human edits and revision mode are still not covered.
+
+## 10. Changes of eval_plan_v2 (frozen at the tag eval_plan_v2 on 23 Nov 2026)
+
+Reason: after eval_v1, an AI written personal essay of 182 words was scored with the eval_v1 calibration. Its
+raw score of 7.9 is higher than that of every ELLIPSE essay of its length in calib, but the verdict was
+"Can't tell reliably" with P(AI) 0.31. In calib, the texts of that length and score are mostly human research
+abstracts. The only AI essays are from GPT 3 in 2023, and they all score above 11. The calibration therefore
+lacks AI written essays of current models, and it compares an essay with texts of every kind. No metric,
+threshold or verdict rule of §2 changes.
+
+1. **New AI text.** AI written student essays from tasks drawn by `eval/essay_tasks.py`. The topics are the 44
+   ELLIPSE prompts. Each essay is an argument, personal or explanatory essay with a target of 180, 300, 450 or
+   650 words. Its voice is plain, that of a student of a named grade, or that of a student still learning
+   English.
+   * Claude Opus, Sonnet and Haiku: 100 essays each, written by Claude Code subagents of those models on
+     20 Nov 2026. Decoding settings cannot be set this way, and the subagents run with the system prompt of
+     Claude Code, not with the instruction alone. None of the 300 essays contains an em dash, so the style
+     rules of the session probably reached the subagents.
+   * **These 300 essays were scored before this plan was frozen.** Of them, 289 were labelled "Likely AI
+     written or AI edited" with the eval_v1 calibration, 11 "Can't tell reliably" and none "Likely human
+     written". Because these results have been seen, the 300 essays go to calib only. Claude essays for test
+     can be written after the tag from new task seeds; whether to do so is open (see below).
+   * Qwen 2.5 1.5B Instruct, run locally: 400 essays, decoding fixed in `eval/generate_qwen_essays.py`.
+   * Three public sets, downloaded on 20 Nov 2026 with the owner's approval and pinned in `eval/fetch_data.py`.
+     None is listed in the training data of GPTTrace or of its training set.
+     * **GEDE** (CC BY-NC-SA 4.0): essays of UK university students from BAWE, of whom 336 have English as
+       their first language, and essays by GPT 4o mini and Llama 3.3 70B written for the same tasks. The
+       part built on PERSUADE is left out. AI improvements and rewrites of human essays are labelled
+       `ai_edited`. DIPPER paraphrases and AI rewrites of AI essays are flagged as attacked.
+     * **Ghostbuster essays** (CC BY 3.0 in the original repository, read from a mirror): 1,000 IvyPanda
+       essays and essays by GPT 3.5 and Claude from 2023 on the same prompts.
+     * **DACTYL test split** (MIT): AI student essays of 13 generators from 2024 and 2025, some of them
+       on ELLIPSE prompts (968 of 5,044). Its human essays are left out, because their source is not stated.
+   * AI texts of the new sources are sampled with a fixed seed, at most 120 (GEDE), 100 (Ghostbuster) or 60
+     (DACTYL) per generator, way of production and attack flag. All their human texts are kept.
+2. **Splits** (`eval/build_manifests_v2.py`). Texts of eval_v1 keep their split. A generated essay goes to
+   the split of the ELLIPSE prompt of its topic, so that the human and AI essays on one topic are never in
+   different splits. Other new groups are split as in eval_v1. The results of eval_v1 have been seen, so the
+   texts of its test split are no longer unseen. The new claims rest on the new texts.
+3. **Calibration by kind of text.** Next to the calibration for all texts, the calibration file holds one
+   fitted only on student essays (`detechum score --kind student_essay`). The kind is declared by the user
+   and not checked. M1, M2 and the verdict rates are reported for all texts and, on the student essays of
+   test, for this calibration.
+4. **New strata of AI texts:** generator family, kind of essay and voice. The voice of a learner of English is
+   the AI side of the nonnative question and is reported on its own.
+5. **M4 on the attacked texts.** The DIPPER paraphrases and AI rewrites of GEDE give a first measurement of
+   the true positive rate under attack at the M1 threshold. Commercial humanizers are still not covered.
+   Attacked texts are never used for fitting, so M4 measures a calibration that has not seen the attack.
+6. **Harness.** `eval/run_v2.py` calls the functions of `eval/run.py` unchanged and adds items 3 to 5, the
+   M3 rule of the open question below and the AI edited texts per source and way of editing.
+   `eval/report_v2.py` renders the report. The run on test refuses to start without the tag `eval_plan_v2`.
+
+Recorded on 21 Nov 2026, before the tag:
+
+* **The scores of the new texts were looked at on both splits.** After scoring, one summary per source and way
+  of production counted the texts above the eval_v1 threshold of M1, for calib and test together. Nothing in
+  this plan was changed because of it. Every later look used calib only. The claims of eval_v2 on the new test
+  texts are therefore made after one look at their pooled scores.
+* **Rehearsal on calib** (`results/eval_v2_rehearsal/report.md`, not a result): the human texts given "Likely
+  AI written or AI edited" are 7 of 2,143 for all texts and 7 of 1,916 for student essays. All but one are
+  Ghostbuster essays from IvyPanda (6 or 7 of 248), which are polished essays by unknown writers. AI essays of
+  small Llama models are the weakest generators: the Llama family is flagged 70% of the time, the voice of a
+  learner of English 77% to 80%. DIPPER lowers the true positive rate by 3 points (interval from -0.5 to
+  16.7). With the student essay calibration fitted on all of calib, the essay of the reason above gets P(AI)
+  0.62 (0.42 to 0.79). Its conformal set holds AI alone, but the interval still crosses tau, so the verdict
+  stays "Can't tell reliably". The band of 150 to 249 words holds 463 human and 176 AI essays.
+
+Decisions of 21 Nov 2026. The owner left the three questions below to the recommendation made with them:
+
+* **M3 keeps the rule of §2.** The rule of upper bounds is reported next to it for comparison only.
+* **No Claude essays are written for test.** Claude text on test comes from MELD-eval and TextSight (2026 models), DACTYL (Claude 3.5) and
+  Ghostbuster (2023).
+* **A batch of 400 short Qwen essays is added**, with targets of 120 and 160 words from new task seeds
+  (`generate_qwen_essays.py --short`). Like every generated essay, each goes to the split of its topic, so
+  the batch adds short AI essays to calib and to test.
+  Written and scored on the night of 22 Nov 2026. Of the 400, 232 have 150 to 249 words and 11 reached the
+  token budget. Every text of the manifests before the batch kept its split. The AI essays of that band in
+  calib rose from 176 to 293, but the essay of the reason above still gets P(AI) 0.62 (0.42 to 0.79) with the
+  student essay calibration: the new essays score far above 7.9, so they add nothing near it. Near that score
+  the human and AI essays overlap (2 of 463 human essays score higher, 20 of 293 AI essays lower), and only a
+  stronger signal of the scorer can separate them.
+
+**A second signal, decided on 23 Nov 2026 before the tag.** The owner approved the download of the Desklib
+AI text detector v1.01 (DeBERTa v3 large fine tuned on RAID, MIT, 1.74 GB, pinned in `detechum.models`) and
+asked that the tag wait for this test. The earlier second signal, the Binoculars style ratio of the local
+Qwen pair, flagged 52.7% of the TOEFL essays of bias_v1 (§8), so a second signal is first tested for the same
+fault. Desklib scores the calib split only (`score_corpora.py --scorer desklib --splits calib`). The rule
+below was written before any Desklib score was seen. All of it uses the rehearsal halves of calib: fit on
+one half, measure on the other, student essays only, with the threshold that flags 1% of the human essays
+of the fitting half.
+
+1. **Desklib is ruled out** if, on its own, the 95% upper bound of its flag rate on the nonnative human
+   essays exceeds 2%, the bound of M3.
+2. **The combination is adopted** only if all of these hold. It is a logistic regression on the two raw
+   scores fitted on the fitting half, and its output replaces the raw score of GPTTrace in calibration.
+   * Its true positive rate is higher than that of GPTTrace alone at GPTTrace's own threshold.
+   * The 95% upper bound of its flag rate on the nonnative human essays is at most 2%.
+   * No human source of student essays is flagged more often than with GPTTrace alone.
+   * Run through `run_v2.py --rehearsal`, it gives no more human texts the label "Likely AI written or AI
+     edited" than GPTTrace alone.
+3. If the combination is not adopted, eval_plan_v2 is tagged with GPTTrace alone and the result is
+   recorded here.
+
+Order of events: the tag `eval_plan_v2` was made at 13:53 on 23 Nov 2026 on commit `30a8a94`, eight minutes
+before the owner asked for it to wait. The frozen plan therefore names GPTTrace alone, and this test of a
+second signal was run after the tag, on calib only. No test text was scored with Desklib.
+
+**Result (scored 25 and 26 Nov 2026, `results/second_signal_v1/`): the combination is not adopted.** On the
+held out half of the calib student essays (2,023 human, 1,130 AI), at the threshold that flags 1% of the
+human essays of the fitting half:
+
+| Score | True positive rate | Nonnative human essays flagged | Human essays flagged per source |
+|---|---|---|---|
+| GPTTrace alone | 91.8% (90.0 to 93.3) | 3 of 1,625, upper bound 0.5% | ELLIPSE 0, GEDE 0, Ghostbuster 18, Liang 6 |
+| Desklib alone | 92.5% (90.8 to 93.9) | 11 of 1,625, upper bound 1.2% | ELLIPSE 3, GEDE 1, Ghostbuster 4, Liang 10 |
+| Combination | 94.1% (92.5 to 95.4) | 11 of 1,625, upper bound 1.2% | ELLIPSE 2, GEDE 2, Ghostbuster 4, Liang 11 |
+
+1. Desklib is not ruled out: its upper bound on the nonnative essays is 1.2%, within 2%.
+2. The combination meets three conditions and fails one. It catches more AI essays, its nonnative bound is
+   within 2%, and in the rehearsal it gives no human student essay the label "Likely AI written or AI
+   edited" (GPTTrace alone: 7 of 1,916; all texts: 3 of 2,143 against 7). But it flags more human essays of
+   ELLIPSE, GEDE and Liang than GPTTrace alone, and the nonnative essays flagged rise from 3 to 11. That
+   fails the condition that no human source is flagged more often, so the combination is not adopted.
+
+The trade is the one this project refuses: fewer polished human essays of unknown writers (Ghostbuster) are
+flagged, and more essays of English learners are. The essay of the reason above gets a combined score of
+-0.85 against a threshold of -0.13, so the combination would not have flagged it either. eval_plan_v2 stays
+as tagged, with GPTTrace alone.
+
+The questions as they were put:
+
+* **The ratio of M3 is undefined when no native text is flagged.** With 0 flagged native texts, §2 gives no
+  value and the gate cannot pass, however low the nonnative rate is. One option is to compare the upper
+  bound of the nonnative rate with 1.5 times the upper bound of the native rate.
+  In the rehearsal native texts are flagged, so both rules give a value there. `M3_RULE` in
+  `eval/run_v2.py` holds the rule adopted.
+* Whether Claude essays for test are written after the tag, at a cost of about 250,000 tokens for 100 essays.
+* Whether more AI essays of 150 to 249 words are written for calib before the tag, with Qwen run locally from
+  new task seeds. Their few AI essays make the probability interval of that band wide. This does not change a
+  rule, and no rule is changed to give one essay a label.
