@@ -481,7 +481,47 @@ What the run means for this plan:
 2. The gaps to close before that run are native human essays that the scorer has not seen, AI written
    student essays and attacked text for M4.
 
-## 10. Changes proposed for eval_plan_v2 (draft, not frozen)
+### eval_v2 (26 Nov 2026)
+
+* **Plan:** `eval_plan_v2`, tagged on commit `30a8a94` (the changes of §10). One run on test, at 17:28 UTC,
+  logged as `30a8a94 with uncommitted changes`. The uncommitted files were the test of a second signal of
+  §10, which `eval/run_v2.py` does not read; the harness, thresholds, manifests and scores were checked to be
+  identical to the tag before the run.
+* **Outputs:** [`results/eval_v2/report.md`](../../results/eval_v2/report.md), with `metrics.json`, the
+  calibration file (with its `student_essay` entry) and the predictions as hashes and numbers.
+
+| | All texts | Student essays (`--kind student_essay`) |
+|---|---|---|
+| Test texts | 4,300 human, 3,302 AI | 3,967 human, 1,735 AI |
+| M1 true positive rate | 94.4% (93.5 to 95.1) | 90.6% (89.1 to 91.9) |
+| M1 realized false positive rate | 0.5% (0.3 to 0.8) | 0.9% (0.6 to 1.2) |
+| M2 ECE (target 0.03) | 0.0118, met | 0.0105, met |
+| M3 gate (rule of §2) | not evaluable | not evaluable |
+| M4, DIPPER | 100% to 98.3%, drop 1.7 points (-0.3 to 9.2) | same texts, same result |
+| Human texts labelled "Likely AI", 150 words or more | 15 of 4,151 | 15 of 3,910 |
+| AI texts labelled "Likely human", 150 words or more | 171 of 3,275 | 121 of 1,711 |
+
+What the run shows:
+
+* **No essay of an English learner or of a native writer was flagged.** ELLIPSE 0 of 3,245, BAWE 0 of 242.
+  All 15 human texts labelled "Likely AI" are Ghostbuster essays from IvyPanda (unknown writers), which are
+  also flagged at the M1 threshold 4.4% (all texts) and 7.1% (student essays) of the time.
+* **M3 is not evaluable** under the rule of §2, adopted on 21 Nov: no native text is flagged, so the ratio
+  has no value. Under the rule of upper bounds, shown for comparison only, the gate passes (nonnative upper
+  bound 0.1% to 0.2%, native 2.0%).
+* **Weak generators:** Llama 70% to 71% (most are DACTYL's small and fine tuned models), DACTYL as a whole
+  76% to 77%, AI essays in the voice of a learner of English 75% to 77%, Claude in student essays 79%
+  (Claude 3.5 of DACTYL and Claude of 2023 in Ghostbuster). Qwen and GPT essays: 99% to 100%.
+* **The conformal layer misses its AI target on test.** It rules out the own class of 5.9% (all texts) and
+  7.4% (student essays) of the AI texts, against 5%. The test AI texts come from generators whose share
+  differs from calib, so the exchangeability the guarantee needs does not hold across generators. The
+  human target of 1% is met (0.7% and 0.9%).
+* **AI edited human essays** (GEDE): improved by an AI, flagged 74% to 79%; rewritten by an AI, 95% to 96%.
+
+Limits: the 300 Claude essays, the texts of eval_v1 and one pooled look at the new scores (§10) were seen
+before the run. Commercial humanizers, light human edits and revision mode are still not covered.
+
+## 10. Changes of eval_plan_v2 (frozen at the tag eval_plan_v2 on 23 Nov 2026)
 
 Reason: after eval_v1, an AI written personal essay of 182 words was scored with the eval_v1 calibration. Its
 raw score of 7.9 is higher than that of every ELLIPSE essay of its length in calib, but the verdict was
