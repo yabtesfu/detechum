@@ -698,6 +698,12 @@ rule of §2 changes, except where item 4 says so.
    is fetched:**
    * AI essays of the weak cases, for train, calib and test: small and fine tuned open models, the voice of a
      learner of English, and humanlike personal essays. Local generation is preferred, as for Qwen in §10.
+     *Written on 28 Nov 2026:* 800 essays of OLMo 2 1B Instruct (`generate_qwen_essays.py --model olmo`,
+     download of 2.97 GB approved by the owner), in four voices of about 200 essays each, `humanlike` among
+     them. By length: 210 under 150 words, 191 of 150 to 249, 266 of 250 to 499 and 133 of 500 or more. 18
+     essays, all of the two shortest targets, stopped at the token budget. One essay (`olmo-0722`) is three
+     words and no essay; like every text under 150 words, it falls below the minimum length and is not scored.
+     No score of these essays has been computed.
    * Polished human essays of known and unknown writers, so that the calibration learns not to flag them.
    * Native human essays beyond the 336 of BAWE, so that M3 has power on its own.
 6. **Test discipline.** The scores of test texts are not summarized before the tag. `score_corpora.py --splits
@@ -708,6 +714,15 @@ probe set (§6) and latency.
 
 Open questions for the project owner before any data is fetched:
 
-* Which rule changes of item 4 to adopt.
+* ~~Which rule changes of item 4 to adopt.~~ Decided on 27 Nov 2026; the owner left the choice to the
+  recommendation. All three are adopted:
+  * **M3 uses the rule of upper bounds.** The gate passes when the 95% upper bound of the nonnative rate is at
+    most 2% and at most 1.5 times the upper bound of the native rate. A detector that flags no native text can
+    then pass, while the absolute bound on nonnative writers stays.
+  * **The AI side of the conformal layer weights each generator family equally**, and the share of AI texts
+    whose class is ruled out is reported per family. This may give more "Can't tell reliably" verdicts; the
+    rehearsal will show how many before the tag.
+  * **Writers of unknown background are a writer group of their own**, with its own claim of 1% or lower when
+    it has 300 texts, as for the other groups.
 * Which data sources of item 5 to fetch, once each is listed with its size and license.
 * Whether to write Claude essays for test again, at about 250,000 tokens per 100 essays.
