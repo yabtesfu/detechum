@@ -44,10 +44,17 @@ VOICES = {
     "learner": " Write it the way a high school student who is still learning English would write it.",
 }
 
+# Voices added for eval_plan_v3 (plan §11). Kept apart from VOICES, because the draw of a voice depends on
+# how many there are, and the tasks of the earlier batches must stay as they were.
+V3_VOICES = VOICES | {
+    "humanlike": " Write it the way a real student writes a first draft: plain words, sentences of uneven "
+                 "length, and the details of your own life.",
+}
+
 FORMAT = " Write about {words} words. Give plain text only: no title, no headings and no lists."
 
 
-def tasks(n: int, seed: int, id_prefix: str, lengths: list[int] = LENGTHS) -> list[dict]:
+def tasks(n: int, seed: int, id_prefix: str, lengths: list[int] = LENGTHS, voices: dict = VOICES) -> list[dict]:
     """`n` tasks drawn with a fixed seed. Topics, kinds and target lengths are balanced by cycling; voices
     and grades are drawn at random."""
     rng = random.Random(seed)
@@ -57,9 +64,9 @@ def tasks(n: int, seed: int, id_prefix: str, lengths: list[int] = LENGTHS) -> li
     for i in range(n):
         kind = list(KINDS)[i % len(KINDS)]
         words = lengths[(i // len(KINDS)) % len(lengths)]
-        voice = list(VOICES)[rng.randrange(len(VOICES))]
+        voice = list(voices)[rng.randrange(len(voices))]
         grade = rng.randint(8, 12)
-        instruction = (KINDS[kind] + VOICES[voice] + FORMAT).format(topic=topics[i], grade=grade, words=words)
+        instruction = (KINDS[kind] + voices[voice] + FORMAT).format(topic=topics[i], grade=grade, words=words)
         out.append({"id": f"{id_prefix}{i:04d}", "topic": topics[i], "kind": kind, "target_words": words,
                     "voice": voice, "grade": grade if voice == "grade" else None, "instruction": instruction})
     return out

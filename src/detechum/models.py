@@ -115,8 +115,31 @@ DESKLIB = PinnedModel(
     ),
 )
 
+# Generator of AI essays for eval_plan_v3 (plan §11), pinned on 2026-11-27 with the owner's approval. A model
+# family other than those of the scorer's training list and of the existing essays. The blob ids of the git
+# files matched the hub's listing of this revision. README.md and .gitattributes are not fetched.
+OLMO_INSTRUCT = PinnedModel(
+    repo="allenai/OLMo-2-0425-1B-Instruct", revision="48d788eca847d4d7548f375ad03d3c9312f6139e",
+    folder="olmo-2-0425-1b-instruct",
+    weights=PinnedFile("model.safetensors", 2969854224,
+                       "36d044c73655bb904f822915e6294ba3dae8e6e1af5e703e9d452f2d6a3a294f"),
+    other_files=(
+        PinnedFile("config.json", 625, "0d15ebb6cb8d998513b46ef337214176a6fd59fe5f16b30387c70d5f87795a9c"),
+        PinnedFile("generation_config.json", 121,
+                   "437b97826bb4430c205083a0986fbe31f4959cffbe445e47fb7c5192fdcb8d58"),
+        PinnedFile("merges.txt", 916646, "b6fe424e334903f7fb84d3a106d9730455f4744b9fe3c21ee136d97a00e72502"),
+        PinnedFile("special_tokens_map.json", 581,
+                   "78afb564e81264029b25f9caf24bda2521d5bdaeff5cd3fdbc01d3da2e8ce2f2"),
+        PinnedFile("tokenizer.json", 7137177, "73fd5254624f39a88e3faac6a8e11300fc3c735ed37880d4f4f08db898eaecca"),
+        PinnedFile("tokenizer_config.json", 4884,
+                   "50c412c57d832057a3d5db42064c741f751e570f7c8788f037bfb0d2dd6e5f49"),
+        PinnedFile("vocab.json", 1611056, "9e14712c91b37c7aab74b1306baa46ac342d620637a4b44523cdc3aec7d24195"),
+    ),
+)
+
 # Download priority order: the primary scorer first.
-MODELS = {"gpttrace": GPTTRACE, "qwen_base": QWEN_BASE, "qwen_instruct": QWEN_INSTRUCT, "desklib": DESKLIB}
+MODELS = {"gpttrace": GPTTRACE, "qwen_base": QWEN_BASE, "qwen_instruct": QWEN_INSTRUCT, "desklib": DESKLIB,
+          "olmo_instruct": OLMO_INSTRUCT}
 
 
 class ModelVerificationError(Exception):

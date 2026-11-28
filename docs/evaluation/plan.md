@@ -660,3 +660,69 @@ The questions as they were put:
 * Whether more AI essays of 150 to 249 words are written for calib before the tag, with Qwen run locally from
   new task seeds. Their few AI essays make the probability interval of that band wide. This does not change a
   rule, and no rule is changed to give one essay a label.
+
+## 11. Changes proposed for eval_plan_v3 (draft, not frozen)
+
+Reason: eval_v2 (§9) shows that calibration and an off the shelf second signal are used up. GPTTrace flags about
+70% of the essays of small Llama models, about 77% of AI essays in the voice of a learner of English and 79% of
+Claude student essays; a humanlike AI essay can overlap the human essays; and the only false labels come from
+polished essays of unknown writers. Desklib caught more AI essays but flagged more essays of English learners
+(§10). The proposal is a detector head trained for this project, with the protection of English learners built
+into its training and checked by a rule written before its results are seen. No metric, threshold or verdict
+rule of §2 changes, except where item 4 says so.
+
+1. **A third split, train.** The texts of eval_v1 and eval_v2, of both splits, have been seen and may be used
+   for training, which needs no unseen text. calib and test of eval_plan_v3 hold new texts only, split by group
+   as before, so that no group is in two splits.
+2. **A trained head on GPTTrace.** Features: the mean of GPTTrace's last hidden states (1,792 numbers per text)
+   and its raw score, from the same pinned model, so nothing new is downloaded for it. A logistic regression
+   with an L2 penalty is fitted on train. Human texts of nonnative writers get a larger weight in training, and
+   the penalty is chosen by cross validation over groups of train: the strongest true positive rate whose
+   nonnative false positive rate on the held out folds is not above that of GPTTrace alone. The head's log
+   odds replace the raw score in calibration. Extracting the features is one GPTTrace pass per text, about one
+   night for the texts of train.
+3. **Adoption rule, the same as for Desklib (§10).** On the rehearsal halves of the new calib, student essays,
+   at the threshold that flags 1% of the human essays of the fitting half, the head is adopted only if its true
+   positive rate is higher than that of GPTTrace alone, the 95% upper bound of its nonnative flag rate is at
+   most 2%, no human source is flagged more often, and `run_v2.py --rehearsal` gives no more human texts the
+   label "Likely AI written or AI edited". Otherwise eval_plan_v3 uses GPTTrace alone.
+4. **Rule changes proposed, each for the owner to decide:**
+   * **M3:** replace the ratio of §2, which has no value when no native text is flagged (eval_v2), with the
+     rule of upper bounds of §10.
+   * **Conformal layer, AI side:** fit it with every generator family given the same total weight, and report
+     the share of AI texts whose class is ruled out per family. In eval_v2 the share was 7.4% for student
+     essays against a target of 5%, because the families of test differ in share from those of calib.
+   * **Writers of unknown background:** report them as a writer group of their own with its own claim, since
+     every false label of eval_v2 came from them.
+5. **New data, each source to be found, its license confirmed and its download approved with its size before it
+   is fetched:**
+   * AI essays of the weak cases, for train, calib and test: small and fine tuned open models, the voice of a
+     learner of English, and humanlike personal essays. Local generation is preferred, as for Qwen in §10.
+     *Written on 28 Nov 2026:* 800 essays of OLMo 2 1B Instruct (`generate_qwen_essays.py --model olmo`,
+     download of 2.97 GB approved by the owner), in four voices of about 200 essays each, `humanlike` among
+     them. By length: 210 under 150 words, 191 of 150 to 249, 266 of 250 to 499 and 133 of 500 or more. 18
+     essays, all of the two shortest targets, stopped at the token budget. One essay (`olmo-0722`) is three
+     words and no essay; like every text under 150 words, it falls below the minimum length and is not scored.
+     No score of these essays has been computed.
+   * Polished human essays of known and unknown writers, so that the calibration learns not to flag them.
+   * Native human essays beyond the 336 of BAWE, so that M3 has power on its own.
+6. **Test discipline.** The scores of test texts are not summarized before the tag. `score_corpora.py --splits
+   calib` scores calib first; test is scored after the tag. This prevents the pooled look recorded in §10.
+
+Not covered still: commercial humanizers, light human edits, revision mode (§3), the RAID submission (§5), the
+probe set (§6) and latency.
+
+Open questions for the project owner before any data is fetched:
+
+* ~~Which rule changes of item 4 to adopt.~~ Decided on 27 Nov 2026; the owner left the choice to the
+  recommendation. All three are adopted:
+  * **M3 uses the rule of upper bounds.** The gate passes when the 95% upper bound of the nonnative rate is at
+    most 2% and at most 1.5 times the upper bound of the native rate. A detector that flags no native text can
+    then pass, while the absolute bound on nonnative writers stays.
+  * **The AI side of the conformal layer weights each generator family equally**, and the share of AI texts
+    whose class is ruled out is reported per family. This may give more "Can't tell reliably" verdicts; the
+    rehearsal will show how many before the tag.
+  * **Writers of unknown background are a writer group of their own**, with its own claim of 1% or lower when
+    it has 300 texts, as for the other groups.
+* Which data sources of item 5 to fetch, once each is listed with its size and license.
+* Whether to write Claude essays for test again, at about 250,000 tokens per 100 essays.
